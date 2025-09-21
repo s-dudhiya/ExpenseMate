@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
   }, [user, resetInactivityTimer]);
-
+  
   // Handle logout on tab/window close
   useEffect(() => {
     if (!user) return;
