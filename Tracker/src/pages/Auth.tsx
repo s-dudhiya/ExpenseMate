@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -17,6 +17,8 @@ export default function Auth() {
   const [passwordError, setPasswordError] = useState('');
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Redirect if already authenticated
   if (user) {
@@ -27,7 +29,6 @@ export default function Auth() {
     e.preventDefault();
     setPasswordError('');
     
-    // Password confirmation validation for signup
     if (isSignUp && password !== confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
@@ -48,17 +49,6 @@ export default function Auth() {
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center space-y-2">
-          <div className="flex justify-start mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/')}
-              className="text-muted-foreground hover:text-primary"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-          </div>
           <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             ExpenseMate
           </CardTitle>
@@ -95,35 +85,54 @@ export default function Auth() {
                 placeholder="Enter your email"
               />
             </div>
-            <div className="space-y-2">
+
+            {/* Password with toggle */}
+            <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Enter your password"
                 minLength={6}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-9 text-gray-500 hover:text-black"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+
+            {/* Confirm Password with toggle (only for signup) */}
             {isSignUp && (
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   placeholder="Confirm your password"
                   minLength={6}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-9 text-gray-500 hover:text-black"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
                 {passwordError && (
                   <p className="text-sm text-destructive">{passwordError}</p>
                 )}
               </div>
             )}
+
             <Button
               type="submit"
               className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
@@ -132,6 +141,7 @@ export default function Auth() {
               {loading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
             </Button>
           </form>
+
           <div className="mt-4 text-center">
             <button
               type="button"
