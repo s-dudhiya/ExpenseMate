@@ -13,14 +13,21 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loadingForm, setLoadingForm] = useState(false);
   const [passwordError, setPasswordError] = useState('');
-  const { user, signIn, signUp } = useAuth();
+  const { user, signIn, signUp, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Redirect if already authenticated
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -28,13 +35,13 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
-    
+
     if (isSignUp && password !== confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
     }
-    
-    setLoading(true);
+
+    setLoadingForm(true);
 
     if (isSignUp) {
       await signUp(email, password, fullName);
@@ -42,7 +49,7 @@ export default function Auth() {
       await signIn(email, password);
     }
 
-    setLoading(false);
+    setLoadingForm(false);
   };
 
   return (
@@ -52,12 +59,8 @@ export default function Auth() {
           <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             ExpenseMate
           </CardTitle>
-          <CardDescription className="text-lg font-medium">
-            Track Smarter
-          </CardDescription>
-          <CardDescription>
-            {isSignUp ? 'Create your account' : 'Sign in to your account'}
-          </CardDescription>
+          <CardDescription className="text-lg font-medium">Track Smarter</CardDescription>
+          <CardDescription>{isSignUp ? 'Create your account' : 'Sign in to your account'}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +89,6 @@ export default function Auth() {
               />
             </div>
 
-            {/* Password with toggle */}
             <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -107,7 +109,6 @@ export default function Auth() {
               </button>
             </div>
 
-            {/* Confirm Password with toggle (only for signup) */}
             {isSignUp && (
               <div className="space-y-2 relative">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -127,18 +128,16 @@ export default function Auth() {
                 >
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
-                {passwordError && (
-                  <p className="text-sm text-destructive">{passwordError}</p>
-                )}
+                {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
               </div>
             )}
 
             <Button
               type="submit"
               className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
-              disabled={loading}
+              disabled={loadingForm}
             >
-              {loading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+              {loadingForm ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
             </Button>
           </form>
 
