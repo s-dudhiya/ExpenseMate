@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const { toast } = useToast();
 
   const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 hour
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Auto-logout function
   const handleAutoLogout = useCallback(async () => {
+    if (!user) return;
     const { error } = await supabase.auth.signOut();
     if (!error) {
       setUser(null);
@@ -47,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [user, toast]);
 
   // Reset inactivity timer
   const resetInactivityTimer = useCallback(() => {
@@ -64,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleActivity = () => resetInactivityTimer();
 
     activityEvents.forEach(event => document.addEventListener(event, handleActivity, true));
-
     resetInactivityTimer();
 
     return () => {
@@ -83,15 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Listen for auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) fetchProfile(session.user.id);
-        else setProfile(null);
-        setLoading(false);
-      }
-    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+      else setProfile(null);
+      setLoading(false);
+      setInitialized(true); // Mark as initialized
+    });
 
     // Check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -99,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
       setLoading(false);
+      setInitialized(true); // Mark as initialized
     });
 
     return () => subscription.unsubscribe();
@@ -141,6 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Updated signOut: works even after refresh
   const signOut = async () => {
+    if (!initialized || !user) {
+      toast({ title: "Sign Out Failed", description: "Auth session not ready. Please try again.", variant: "destructive" });
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
     if (!error) {
       setUser(null);
