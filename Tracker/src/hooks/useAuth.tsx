@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string, username: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `https://the-expensemate.vercel.app/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -131,9 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = async (email: string) => {
     // Ensure the redirect points to the live URL when tested from the live site, 
     // or fallback to origin (localhost) if testing locally.
-    const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? window.location.origin
-      : 'https://the-expensemate.vercel.app';
+    const baseUrl = 'https://the-expensemate.vercel.app';
 
     const redirectUrl = `${baseUrl}/auth?reset=true`;
 

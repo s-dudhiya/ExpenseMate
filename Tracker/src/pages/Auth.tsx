@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Check, X, Loader2 } from "lucide-react";
-import { useEffect } from 'react';
+
 import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
@@ -20,7 +20,10 @@ export default function Auth() {
   const [loadingForm, setLoadingForm] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const location = useLocation();
+  const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
+    return location.hash.includes('type=recovery') || location.search.includes('reset=true') || window.location.href.includes('type=recovery');
+  });
   const [forgotEmail, setForgotEmail] = useState('');
   const { user, signIn, signUp, resetPassword, updatePassword, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -28,13 +31,10 @@ export default function Auth() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    // Check if the user arrived via a password reset link
-    const hash = window.location.hash;
-    if (hash && hash.includes('type=recovery')) {
+    if (location.hash.includes('type=recovery') || location.search.includes('reset=true') || window.location.href.includes('type=recovery')) {
       setIsRecoveryMode(true);
-      window.location.hash = ''; // Clear hash for cleanliness
     }
-  }, []);
+  }, [location.hash, location.search]);
 
   useEffect(() => {
     if (!isSignUp || username.length < 3) {
@@ -69,6 +69,32 @@ export default function Auth() {
     );
   }
 
+  if (isRecoveryMode && !user) {
+    return (
+      <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-elegant text-center">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-destructive">Invalid or Expired Link</CardTitle>
+            <CardDescription>
+              We couldn't verify your recovery session. The link might have expired or was incorrectly copied.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => {
+                setIsRecoveryMode(false);
+                navigate('/auth', { replace: true });
+              }}
+              className="w-full"
+            >
+              Return to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (user && !isRecoveryMode) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -87,6 +113,8 @@ export default function Auth() {
       setLoadingForm(false);
       if (!error) {
         setIsRecoveryMode(false);
+        // Clear history to prevent getting stuck in recovery mode upon reload
+        window.history.replaceState({}, document.title, window.location.pathname);
         navigate('/dashboard');
       }
       return;

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 // import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -14,6 +14,11 @@ import Maintenance from "./pages/Maintenance";
 const queryClient = new QueryClient();
 
 const isMaintenanceMode = false; // Maintenance mode toggle
+
+const RootRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`/auth${location.search}${location.hash}`} replace />;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -27,7 +32,7 @@ const App = () => (
               <Route path="*" element={<Maintenance />} />
             ) : (
               <>
-                <Route path="/" element={<Navigate to="/auth" replace />} />
+                <Route path="/" element={<RootRedirect />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
