@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
 import { EmptyState } from '@/components/EmptyState';
 import { ExpenseFilters, FilterOptions } from '@/components/ExpenseFilters';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Profile {
   full_name: string;
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [mainTab, setMainTab] = useState('overview');
   const [activeTab, setActiveTab] = useState('tiffin');
   const [filters, setFilters] = useState<FilterOptions>({ timeRange: 'all', status: 'all' });
   const { toast } = useToast();
@@ -164,37 +166,72 @@ export default function Dashboard() {
   const filterExpensesByCategory = (category: string) => applyFilters(expenses.filter(e => e.category === category));
 
   const getSummary = () => {
-    if (!user) return { totalPending: 0, totalLent: 0 };
+    if (!user) return { totalPending: 0, totalLent: 0, chartData: [], personalPending: 0, personalCleared: 0, tiffinPending: 0, deliveryPending: 0, splitOwe: 0, splitOwed: 0 };
     const filteredExpenses = applyFilters(expenses);
 
-    let totalPending = 0; // What I owe (my pending expenses + splits where I owe)
-    let totalLent = 0;    // What others owe me
+    let totalPending = 0;
+    let totalLent = 0;
+    let personalPending = 0;
+    let personalCleared = 0;
+    let tiffinPending = 0;
+    let deliveryPending = 0;
+    let splitOwe = 0;
+    let splitOwed = 0;
+
+    const categoryTotals: Record<string, number> = {};
+    Object.keys(categoryConfig).forEach(k => categoryTotals[k] = 0);
 
     filteredExpenses.forEach(e => {
-      if (e.user_id === user.id) {
-        // I created this. 
+      const isActuallySplit = e.expense_splits && e.expense_splits.length > 0;
+
+      // Only count for personal stats if it's a personal expense (no actual splits created)
+      if (!isActuallySplit) {
+        if (e.status === 'pending') {
+          personalPending += e.amount;
+          if (e.category === 'tiffin') tiffinPending += e.amount;
+          if (e.category === 'delivery') deliveryPending += e.amount;
+        }
+        if (e.status === 'cleared') personalCleared += e.amount;
+      }
+
+      if (e.user_id === user.id) { // Current user is the payer
         if (e.expense_splits && e.expense_splits.length > 0) {
-          // Friends owe me money for this
+          // This is a split expense where current user paid
           e.expense_splits.forEach(s => {
-            if (!s.has_paid) totalLent += s.amount_owed;
+            if (!s.has_paid) {
+              totalLent += s.amount_owed; // Total amount current user is owed across all splits
+              splitOwed += s.amount_owed; // Amount current user is owed specifically from splits
+            }
           });
         } else {
-          // Personal expense
-          if (e.status === 'pending') totalPending += e.amount;
+          // This is a personal expense (no splits)
+          if (e.status === 'pending') {
+            totalPending += e.amount; // Total pending includes personal pending
+          }
         }
-      } else {
-        // Someone else created this, I might owe them
+
+        // Category totals for expenses paid by the current user
+        if (categoryTotals[e.category] !== undefined) {
+          categoryTotals[e.category] += e.amount;
+        }
+      } else { // Current user is not the payer, might be a split participant
         const mySplit = e.expense_splits?.find(s => s.user_id === user.id);
         if (mySplit && !mySplit.has_paid) {
-          totalPending += mySplit.amount_owed;
+          totalPending += mySplit.amount_owed; // Total pending includes amounts current user owes in splits
+          splitOwe += mySplit.amount_owed; // Amount current user owes specifically in splits
         }
       }
     });
 
-    return { totalPending, totalLent };
+    const chartData = Object.keys(categoryConfig).map(key => ({
+      name: categoryConfig[key as keyof typeof categoryConfig].label,
+      total: categoryTotals[key]
+    }));
+
+    return { totalPending, totalLent, chartData, personalPending, personalCleared, tiffinPending, deliveryPending, splitOwe, splitOwed };
   };
 
-  const { totalPending, totalLent } = getSummary();
+  const { totalPending, totalLent, chartData, personalPending, personalCleared, tiffinPending, deliveryPending, splitOwe, splitOwed } = getSummary();
 
   if (authLoading || loading || !user) {
     return (
@@ -231,51 +268,171 @@ export default function Dashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="shadow-elegant border-warning/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe / Pending
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-warning">₹{totalPending.toFixed(2)}</div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-elegant border-success/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-success">₹{totalLent.toFixed(2)}</div>
-            </CardContent>
-          </Card>
-        </div>
 
-        <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="tiffin" className="flex items-center gap-2"><Utensils className="h-4 w-4" /> Tiffin</TabsTrigger>
-            <TabsTrigger value="delivery" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</TabsTrigger>
-            <TabsTrigger value="miscellaneous" className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Misc</TabsTrigger>
+        <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
+            <TabsTrigger value="overview" className="text-base">Overview</TabsTrigger>
+            <TabsTrigger value="personal" className="text-base">Personal</TabsTrigger>
+            <TabsTrigger value="splitwise" className="text-base">Splitwise</TabsTrigger>
           </TabsList>
 
-          {Object.keys(categoryConfig).map(category => (
-            <TabsContent key={category} value={category} className="space-y-6">
-              <ExpenseCategoryView
-                expenses={filterExpensesByCategory(category)}
-                category={category}
-                currentUserId={user.id}
-                onMarkCleared={markAsCleared}
-                onMarkSplitPaid={markSplitAsPaid}
-                onDelete={handleDelete}
-                filters={filters}
-              />
-            </TabsContent>
-          ))}
+          <TabsContent value="overview" className="space-y-6 mt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="shadow-elegant border-warning/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe / Pending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-warning">₹{totalPending.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-elegant border-success/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-success">₹{totalLent.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="shadow-elegant">
+              <CardHeader>
+                <CardTitle>Spending by Category</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `₹${value}`} />
+                      <Tooltip cursor={{ fill: 'transparent' }} formatter={(value) => [`₹${value}`, 'Total']} />
+                      <Bar dataKey="total" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="personal" className="space-y-6 mt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-2">
+              <Card className="shadow-elegant border-warning/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ArrowDownRight className="h-4 w-4 text-warning" /> Total Pending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-warning">₹{personalPending.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-elegant border-success/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ArrowUpRight className="h-4 w-4 text-success" /> Total Cleared
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-success">₹{personalCleared.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-elegant border-warning/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Utensils className="h-4 w-4 text-warning" /> Tiffin Pending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-warning">₹{tiffinPending.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-elegant border-warning/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-warning" /> Delivery Pending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-warning">₹{deliveryPending.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+            </div>
+            <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="tiffin" className="flex items-center gap-2"><Utensils className="h-4 w-4" /> Tiffin</TabsTrigger>
+                <TabsTrigger value="delivery" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</TabsTrigger>
+                <TabsTrigger value="miscellaneous" className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Misc</TabsTrigger>
+              </TabsList>
+
+              {Object.keys(categoryConfig).map(category => (
+                <TabsContent key={category} value={category} className="space-y-6">
+                  <ExpenseCategoryView
+                    expenses={filterExpensesByCategory(category).filter(e => !e.expense_splits || e.expense_splits.length === 0)}
+                    category={category}
+                    currentUserId={user.id}
+                    onMarkCleared={markAsCleared}
+                    onMarkSplitPaid={markSplitAsPaid}
+                    onDelete={handleDelete}
+                    filters={filters}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="splitwise" className="space-y-6 mt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-2">
+              <Card className="shadow-elegant border-warning/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-warning">₹{splitOwe.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-elegant border-success/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-success">₹{splitOwed.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+            </div>
+            <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="tiffin" className="flex items-center gap-2"><Utensils className="h-4 w-4" /> Tiffin</TabsTrigger>
+                <TabsTrigger value="delivery" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</TabsTrigger>
+                <TabsTrigger value="miscellaneous" className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Misc</TabsTrigger>
+              </TabsList>
+
+              {Object.keys(categoryConfig).map(category => (
+                <TabsContent key={category} value={category} className="space-y-6">
+                  <ExpenseCategoryView
+                    expenses={filterExpensesByCategory(category).filter(e => e.expense_splits && e.expense_splits.length > 0)}
+                    category={category}
+                    currentUserId={user.id}
+                    onMarkCleared={markAsCleared}
+                    onMarkSplitPaid={markSplitAsPaid}
+                    onDelete={handleDelete}
+                    filters={filters}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
         </Tabs>
       </div>
 
