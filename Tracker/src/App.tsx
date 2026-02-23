@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 // import Index from "./pages/Index";
+import Admin from './pages/Admin';
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -14,7 +15,7 @@ import Maintenance from "./pages/Maintenance";
 
 const queryClient = new QueryClient();
 
-const isMaintenanceMode = true; // Maintenance mode toggle
+const isMaintenanceMode = false; // Maintenance mode toggle
 
 const RootRedirect = () => {
   const location = useLocation();
@@ -38,6 +39,7 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/friends" element={<Friends />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="/admin" element={<Admin />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />
               </>
