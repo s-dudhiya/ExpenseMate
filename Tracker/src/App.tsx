@@ -8,12 +8,13 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import Friends from "./pages/Friends";
 import NotFound from "./pages/NotFound";
 import Maintenance from "./pages/Maintenance";
 
 const queryClient = new QueryClient();
 
-const isMaintenanceMode = true // Maintenance mode toggle
+const isMaintenanceMode = false; // Maintenance mode toggle
 
 const RootRedirect = () => {
   const location = useLocation();
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/" element={<RootRedirect />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/friends" element={<Friends />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />

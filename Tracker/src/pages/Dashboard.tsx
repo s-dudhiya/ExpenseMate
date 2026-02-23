@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2 } from 'lucide-react';
+import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -229,6 +229,14 @@ export default function Dashboard() {
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Expense
+            </Button>
+            <Button
+              onClick={() => navigate('/friends')}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Users className="h-4 w-4" />
             </Button>
             <Button
               onClick={() => navigate('/profile')}
