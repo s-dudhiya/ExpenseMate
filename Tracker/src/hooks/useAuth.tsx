@@ -128,7 +128,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/auth?reset=true`;
+    // Ensure the redirect points to the live URL when tested from the live site, 
+    // or fallback to origin (localhost) if testing locally.
+    const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? window.location.origin
+      : 'https://the-expensemate.vercel.app';
+
+    const redirectUrl = `${baseUrl}/auth?reset=true`;
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });

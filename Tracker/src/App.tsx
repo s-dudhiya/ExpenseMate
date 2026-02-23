@@ -13,7 +13,7 @@ import Maintenance from "./pages/Maintenance";
 
 const queryClient = new QueryClient();
 
-const isMaintenanceMode = true; // Maintenance mode toggle
+const isMaintenanceMode = false; // Maintenance mode toggle
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
