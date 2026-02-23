@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2, Users } from 'lucide-react';
+import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2, Users, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,14 +13,31 @@ import { AddExpenseForm } from '@/components/AddExpenseForm';
 import { EmptyState } from '@/components/EmptyState';
 import { ExpenseFilters, FilterOptions } from '@/components/ExpenseFilters';
 
+interface Profile {
+  full_name: string;
+  username: string;
+}
+
+interface ExpenseSplit {
+  id: string;
+  user_id: string;
+  amount_owed: number;
+  has_paid: boolean;
+  profiles?: Profile;
+}
+
 interface Expense {
   id: string;
+  user_id: string;
   amount: number;
   category: string;
   note?: string;
   status: 'pending' | 'cleared';
+  split_type?: string;
   created_at: string;
   updated_at: string;
+  expense_splits?: ExpenseSplit[];
+  profiles?: Profile;
 }
 
 const categoryConfig = {
@@ -45,7 +62,6 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  // Redirect if not authenticated - after all hooks are called
   if (!authLoading && !user) {
     return <Navigate to="/auth" replace />;
   }
@@ -54,20 +70,17 @@ export default function Dashboard() {
     try {
       const { data, error } = await supabase
         .from('expenses')
-        .select('*')
+        .select(`
+          *,
+          profiles!expenses_user_id_fkey(full_name, username),
+          expense_splits(id, user_id, amount_owed, has_paid, profiles!expense_splits_user_id_fkey(full_name, username))
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setExpenses((data || []).map(expense => ({
-        ...expense,
-        status: expense.status as 'pending' | 'cleared'
-      })));
+      setExpenses((data || []) as unknown as Expense[]);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch expenses',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to fetch expenses', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -75,136 +88,119 @@ export default function Dashboard() {
 
   const markAsCleared = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .update({ status: 'cleared' })
-        .eq('id', id);
-
+      const { error } = await supabase.from('expenses').update({ status: 'cleared' }).eq('id', id);
       if (error) throw error;
-
-      setExpenses(prev =>
-        prev.map(expense =>
-          expense.id === id ? { ...expense, status: 'cleared' as const } : expense
-        )
-      );
-
-      toast({
-        title: 'Success',
-        description: 'Expense marked as cleared',
-      });
+      setExpenses(prev => prev.map(e => e.id === id ? { ...e, status: 'cleared' as const } : e));
+      toast({ title: 'Success', description: 'Expense marked as cleared' });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update expense',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to update expense', variant: 'destructive' });
+    }
+  };
+
+  const markSplitAsPaid = async (splitId: string) => {
+    try {
+      const { error } = await supabase.from('expense_splits').update({ has_paid: true }).eq('id', splitId);
+      if (error) throw error;
+      fetchExpenses(); // Re-fetch to update all nested states safely
+      toast({ title: 'Settled', description: 'Marked split as paid!' });
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to update split', variant: 'destructive' });
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('expenses').delete().eq('id', id);
       if (error) throw error;
-
       setExpenses(prev => prev.filter(expense => expense.id !== id));
-
-      toast({
-        title: 'Success',
-        description: 'Expense deleted successfully',
-      });
+      toast({ title: 'Success', description: 'Expense deleted successfully' });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete expense',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to delete expense', variant: 'destructive' });
     }
   };
 
   const applyFilters = (expenseList: Expense[]) => {
     let filtered = [...expenseList];
 
-    // Filter by time range
     if (filters.timeRange !== 'all') {
       const now = new Date();
       const filterDate = new Date();
-
       switch (filters.timeRange) {
         case 'this-month':
-          filterDate.setMonth(now.getMonth(), 1);
-          filterDate.setHours(0, 0, 0, 0);
-          break;
+          filterDate.setMonth(now.getMonth(), 1); filterDate.setHours(0, 0, 0, 0); break;
         case 'last-month':
-          filterDate.setMonth(now.getMonth() - 1, 1);
-          filterDate.setHours(0, 0, 0, 0);
+          filterDate.setMonth(now.getMonth() - 1, 1); filterDate.setHours(0, 0, 0, 0);
           const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
           endOfLastMonth.setHours(23, 59, 59, 999);
-          filtered = filtered.filter(expense => {
-            const expenseDate = new Date(expense.created_at);
-            return expenseDate >= filterDate && expenseDate <= endOfLastMonth;
+          filtered = filtered.filter(e => {
+            const d = new Date(e.created_at); return d >= filterDate && d <= endOfLastMonth;
           });
           break;
         case 'this-week':
           const startOfWeek = new Date(now);
-          startOfWeek.setDate(now.getDate() - now.getDay());
-          startOfWeek.setHours(0, 0, 0, 0);
+          startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0, 0, 0, 0);
           filterDate.setTime(startOfWeek.getTime());
           break;
       }
-
       if (filters.timeRange !== 'last-month') {
-        filtered = filtered.filter(expense => new Date(expense.created_at) >= filterDate);
+        filtered = filtered.filter(e => new Date(e.created_at) >= filterDate);
       }
     }
 
-    // Filter by status
     if (filters.status !== 'all') {
-      filtered = filtered.filter(expense => expense.status === filters.status);
+      filtered = filtered.filter(e => {
+        // Custom logic: if it's a split I owe, check my split status.
+        if (user && e.user_id !== user.id) {
+          const mySplit = e.expense_splits?.find(s => s.user_id === user.id);
+          if (mySplit) return filters.status === 'cleared' ? mySplit.has_paid : !mySplit.has_paid;
+        }
+        return e.status === filters.status;
+      });
     }
 
     return filtered;
   };
 
-  const filterExpensesByCategory = (category: string) => {
-    const categoryExpenses = expenses.filter(expense => expense.category === category);
-    return applyFilters(categoryExpenses);
-  };
+  const filterExpensesByCategory = (category: string) => applyFilters(expenses.filter(e => e.category === category));
 
   const getSummary = () => {
+    if (!user) return { totalPending: 0, totalLent: 0 };
     const filteredExpenses = applyFilters(expenses);
 
-    const totalPending = filteredExpenses
-      .filter(e => e.status === 'pending')
-      .reduce((sum, e) => sum + e.amount, 0);
+    let totalPending = 0; // What I owe (my pending expenses + splits where I owe)
+    let totalLent = 0;    // What others owe me
 
-    const totalCleared = filteredExpenses
-      .filter(e => e.status === 'cleared')
-      .reduce((sum, e) => sum + e.amount, 0);
+    filteredExpenses.forEach(e => {
+      if (e.user_id === user.id) {
+        // I created this. 
+        if (e.expense_splits && e.expense_splits.length > 0) {
+          // Friends owe me money for this
+          e.expense_splits.forEach(s => {
+            if (!s.has_paid) totalLent += s.amount_owed;
+          });
+        } else {
+          // Personal expense
+          if (e.status === 'pending') totalPending += e.amount;
+        }
+      } else {
+        // Someone else created this, I might owe them
+        const mySplit = e.expense_splits?.find(s => s.user_id === user.id);
+        if (mySplit && !mySplit.has_paid) {
+          totalPending += mySplit.amount_owed;
+        }
+      }
+    });
 
-    // Category-specific pending amounts
-    const tiffinPending = expenses
-      .filter(e => e.category === 'tiffin' && e.status === 'pending')
-      .reduce((sum, e) => sum + e.amount, 0);
-
-    const deliveryPending = expenses
-      .filter(e => e.category === 'delivery' && e.status === 'pending')
-      .reduce((sum, e) => sum + e.amount, 0);
-
-    return { totalPending, totalCleared, tiffinPending, deliveryPending };
+    return { totalPending, totalLent };
   };
 
-  const { totalPending, totalCleared, tiffinPending, deliveryPending } = getSummary();
+  const { totalPending, totalLent } = getSummary();
 
-  if (authLoading || loading) {
+  if (authLoading || loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -212,7 +208,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -222,28 +217,13 @@ export default function Dashboard() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <Button
-              onClick={() => setShowAddForm(true)}
-              size="sm"
-              className="bg-gradient-primary hover:opacity-90"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Expense
+            <Button onClick={() => setShowAddForm(true)} size="sm" className="bg-gradient-primary">
+              <Plus className="h-4 w-4 mr-2" /> Add Expense
             </Button>
-            <Button
-              onClick={() => navigate('/friends')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
+            <Button onClick={() => navigate('/friends')} variant="outline" size="sm" title="Friends Hub">
               <Users className="h-4 w-4" />
             </Button>
-            <Button
-              onClick={() => navigate('/profile')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
+            <Button onClick={() => navigate('/profile')} variant="outline" size="sm" title="Profile Settings">
               <User className="h-4 w-4" />
             </Button>
           </div>
@@ -251,66 +231,36 @@ export default function Dashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="shadow-elegant">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Pending</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-warning">₹{totalPending}</div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-elegant">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Cleared</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-success">₹{totalCleared}</div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-elegant">
+          <Card className="shadow-elegant border-warning/20">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Utensils className="h-4 w-4" />
-                Tiffin Pending
+                <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe / Pending
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-warning">₹{tiffinPending}</div>
+              <div className="text-3xl font-bold text-warning">₹{totalPending.toFixed(2)}</div>
             </CardContent>
           </Card>
-          <Card className="shadow-elegant">
+          <Card className="shadow-elegant border-success/20">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Truck className="h-4 w-4" />
-                Delivery Pending
+                <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-warning">₹{deliveryPending}</div>
+              <div className="text-3xl font-bold text-success">₹{totalLent.toFixed(2)}</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Expense Filters */}
         <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
 
-        {/* Expense Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="tiffin" className="flex items-center gap-2">
-              <Utensils className="h-4 w-4" />
-              Tiffin
-            </TabsTrigger>
-            <TabsTrigger value="delivery" className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Delivery
-            </TabsTrigger>
-            <TabsTrigger value="miscellaneous" className="flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Miscellaneous
-            </TabsTrigger>
+            <TabsTrigger value="tiffin" className="flex items-center gap-2"><Utensils className="h-4 w-4" /> Tiffin</TabsTrigger>
+            <TabsTrigger value="delivery" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</TabsTrigger>
+            <TabsTrigger value="miscellaneous" className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Misc</TabsTrigger>
           </TabsList>
 
           {Object.keys(categoryConfig).map(category => (
@@ -318,7 +268,9 @@ export default function Dashboard() {
               <ExpenseCategoryView
                 expenses={filterExpensesByCategory(category)}
                 category={category}
+                currentUserId={user.id}
                 onMarkCleared={markAsCleared}
+                onMarkSplitPaid={markSplitAsPaid}
                 onDelete={handleDelete}
                 filters={filters}
               />
@@ -327,92 +279,58 @@ export default function Dashboard() {
         </Tabs>
       </div>
 
-      {/* Add Expense Modal */}
-      {showAddForm && (
-        <AddExpenseForm
-          onClose={() => setShowAddForm(false)}
-          onSuccess={() => {
-            setShowAddForm(false);
-            fetchExpenses();
-          }}
-        />
-      )}
+      {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />}
     </div>
   );
 }
 
 function ExpenseCategoryView({
-  expenses,
-  category,
-  onMarkCleared,
-  onDelete,
-  filters
+  expenses, category, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete, filters
 }: {
-  expenses: Expense[];
-  category: string;
-  onMarkCleared: (id: string) => void;
-  onDelete: (id: string) => void;
-  filters: FilterOptions;
+  expenses: Expense[]; category: string; currentUserId: string;
+  onMarkCleared: (id: string) => void; onMarkSplitPaid: (id: string) => void; onDelete: (id: string) => void; filters: FilterOptions;
 }) {
-  const pendingExpenses = expenses.filter(e => e.status === 'pending');
-  const clearedExpenses = expenses.filter(e => e.status === 'cleared');
+  const pendingExpenses = expenses.filter(e => {
+    if (e.user_id !== currentUserId) {
+      const mySplit = e.expense_splits?.find(s => s.user_id === currentUserId);
+      return mySplit && !mySplit.has_paid;
+    }
+    return e.status === 'pending';
+  });
 
-  if (expenses.length === 0) {
-    const isFiltered = filters.timeRange !== 'all' || filters.status !== 'all';
-    const message = isFiltered
-      ? `No ${categoryConfig[category as keyof typeof categoryConfig]?.label} expenses found for selected filters`
-      : `No ${categoryConfig[category as keyof typeof categoryConfig]?.label} expenses yet`;
+  const clearedExpenses = expenses.filter(e => {
+    if (e.user_id !== currentUserId) {
+      const mySplit = e.expense_splits?.find(s => s.user_id === currentUserId);
+      return mySplit && mySplit.has_paid;
+    }
+    return e.status === 'cleared';
+  });
 
-    return (
-      <EmptyState
-        category={category}
-        message={message}
-      />
-    );
-  }
+  if (expenses.length === 0) return <EmptyState category={category} message={`No ${categoryConfig[category as keyof typeof categoryConfig]?.label} expenses found`} />;
 
   return (
     <div className="space-y-6">
-      {/* Pending Dues */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-warning">
-          Pending Dues ({pendingExpenses.length})
-        </h3>
+        <h3 className="text-lg font-semibold mb-4 text-warning">Pending ({pendingExpenses.length})</h3>
         {pendingExpenses.length === 0 ? (
-          <Card className="p-6 text-center text-muted-foreground">
-            No pending dues
-          </Card>
+          <Card className="p-6 text-center text-muted-foreground">No pending dues</Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {pendingExpenses.map(expense => (
-              <ExpenseCard
-                key={expense.id}
-                expense={expense}
-                onMarkCleared={onMarkCleared}
-                onDelete={onDelete}
-              />
+              <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkCleared={onMarkCleared} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Cleared Expenses */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-success">
-          Cleared Expenses ({clearedExpenses.length})
-        </h3>
+        <h3 className="text-lg font-semibold mb-4 text-success">Cleared ({clearedExpenses.length})</h3>
         {clearedExpenses.length === 0 ? (
-          <Card className="p-6 text-center text-muted-foreground">
-            No cleared expenses
-          </Card>
+          <Card className="p-6 text-center text-muted-foreground">No cleared expenses</Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {clearedExpenses.map(expense => (
-              <ExpenseCard
-                key={expense.id}
-                expense={expense}
-                onDelete={onDelete}
-              />
+              <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} />
             ))}
           </div>
         )}
@@ -422,19 +340,25 @@ function ExpenseCategoryView({
 }
 
 function ExpenseCard({
-  expense,
-  onMarkCleared,
-  onDelete
+  expense, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete
 }: {
-  expense: Expense;
-  onMarkCleared?: (id: string) => void;
-  onDelete?: (id: string) => void;
+  expense: Expense; currentUserId: string;
+  onMarkCleared?: (id: string) => void; onMarkSplitPaid?: (id: string) => void; onDelete?: (id: string) => void;
 }) {
   const config = categoryConfig[expense.category as keyof typeof categoryConfig];
   const Icon = config?.icon || Receipt;
 
+  const isCreator = expense.user_id === currentUserId;
+  const isSplitExpense = Array.isArray(expense.expense_splits) && expense.expense_splits.length > 0;
+
+  // If I didn't create it, find my specific split details
+  const mySplit = !isCreator ? expense.expense_splits?.find(s => s.user_id === currentUserId) : null;
+
+  const displayAmount = isCreator ? expense.amount : (mySplit?.amount_owed || expense.amount);
+  const isPending = isCreator ? expense.status === 'pending' : (mySplit ? !mySplit.has_paid : false);
+
   return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow">
+    <Card className={`shadow-md hover:shadow-lg transition-shadow border-t-4 ${isCreator && isSplitExpense ? 'border-t-primary' : !isCreator ? 'border-t-warning' : 'border-t-transparent'}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -442,45 +366,62 @@ function ExpenseCard({
             <span className="font-medium">{config?.label || expense.category}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge
-              variant={expense.status === 'pending' ? 'default' : 'secondary'}
-              className={expense.status === 'pending' ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}
-            >
-              {expense.status === 'pending' ? 'Pending' : 'Cleared'}
+            <Badge variant={isPending ? 'default' : 'secondary'} className={isPending ? 'bg-warning' : 'bg-success'}>
+              {isPending ? 'Pending' : 'Cleared'}
             </Badge>
-            {onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                onClick={() => onDelete(expense.id)}
-              >
+            {isCreator && onDelete && (
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => onDelete(expense.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="text-2xl font-bold">₹{expense.amount}</div>
-          {expense.note && (
-            <p className="text-sm text-muted-foreground">{expense.note}</p>
+        <div className="space-y-1 mb-3">
+          <div className="text-2xl font-bold">₹{displayAmount}</div>
+
+          {!isCreator && expense.profiles && (
+            <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+              <ArrowDownRight className="h-3 w-3" /> Owed to {expense.profiles.full_name}
+            </p>
           )}
-          <p className="text-xs text-muted-foreground">
-            {new Date(expense.created_at).toLocaleDateString()}
-          </p>
+
+          {expense.note && <p className="text-sm text-foreground/80 mt-1">{expense.note}</p>}
+          <p className="text-xs text-muted-foreground">{new Date(expense.created_at).toLocaleDateString()}</p>
         </div>
 
-        {expense.status === 'pending' && onMarkCleared && (
-          <Button
-            onClick={() => onMarkCleared(expense.id)}
-            size="sm"
-            className="w-full mt-3 bg-success hover:bg-success/90"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Mark as Cleared
-          </Button>
+        {/* SPLIT BREAKDOWN FOR CREATOR */}
+        {isCreator && isSplitExpense && (
+          <div className="mt-3 pt-3 border-t space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">SPLIT DETAILS</p>
+            {expense.expense_splits?.map(split => (
+              <div key={split.id} className="flex items-center justify-between text-sm">
+                <span>{split.profiles?.full_name}</span>
+                <span className="flex items-center gap-2">
+                  ₹{split.amount_owed}
+                  {split.has_paid
+                    ? <Badge variant="secondary" className="bg-success/20 text-success text-[10px] px-1 py-0">Paid</Badge>
+                    : <Badge variant="outline" className="text-warning text-[10px] px-1 py-0">Owes</Badge>}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
+
+        {/* ACTION BUTTONS */}
+        <div className="mt-4">
+          {isCreator && !isSplitExpense && isPending && onMarkCleared && (
+            <Button onClick={() => onMarkCleared(expense.id)} size="sm" className="w-full bg-success hover:bg-success/90">
+              <Check className="h-4 w-4 mr-2" /> Mark as Cleared
+            </Button>
+          )}
+
+          {!isCreator && mySplit && isPending && onMarkSplitPaid && (
+            <Button onClick={() => onMarkSplitPaid(mySplit.id)} size="sm" className="w-full bg-primary hover:bg-primary/90">
+              <Check className="h-4 w-4 mr-2" /> Pay ₹{mySplit.amount_owed}
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

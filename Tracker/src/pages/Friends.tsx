@@ -11,7 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
-    id: string;
+    id: string; // The row UUID (we may not strictly need this anymore)
+    user_id: string; // The Auth UUID 
     username: string;
     full_name: string;
 }
@@ -63,7 +64,7 @@ export default function Friends() {
                 .from('connections')
                 .select(`
           id, requester_id, receiver_id, status, created_at,
-          profiles!connections_receiver_id_fkey(id, username, full_name)
+          profiles!connections_receiver_id_fkey(user_id, username, full_name)
         `)
                 .eq('requester_id', user.id);
 
@@ -74,7 +75,7 @@ export default function Friends() {
                 .from('connections')
                 .select(`
           id, requester_id, receiver_id, status, created_at,
-          profiles!connections_requester_id_fkey(id, username, full_name)
+          profiles!connections_requester_id_fkey(user_id, username, full_name)
         `)
                 .eq('receiver_id', user.id);
 
@@ -131,7 +132,7 @@ export default function Friends() {
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, username, full_name')
+                .select('id, user_id, username, full_name')
                 .eq('username', searchUsername.toLowerCase())
                 .maybeSingle();
 
@@ -154,9 +155,9 @@ export default function Friends() {
 
         // Check if a connection already exists
         const existingConnection =
-            friends.find(f => f.profiles.id === receiverId) ||
-            outgoingRequests.find(f => f.profiles.id === receiverId) ||
-            incomingRequests.find(f => f.profiles.id === receiverId);
+            friends.find(f => f.profiles.user_id === receiverId) ||
+            outgoingRequests.find(f => f.profiles.user_id === receiverId) ||
+            incomingRequests.find(f => f.profiles.user_id === receiverId);
 
         if (existingConnection) {
             toast({ title: 'Cannot Send', description: 'A connection with this user already exists or is pending.', variant: 'destructive' });
@@ -319,7 +320,7 @@ export default function Friends() {
                                         <p className="font-bold text-lg">{searchResult.full_name}</p>
                                         <p className="text-sm text-muted-foreground">@{searchResult.username}</p>
                                     </div>
-                                    <Button onClick={() => sendRequest(searchResult.id)} className="bg-gradient-primary">
+                                    <Button onClick={() => sendRequest(searchResult.user_id)} className="bg-gradient-primary">
                                         Send Request
                                     </Button>
                                 </CardContent>
