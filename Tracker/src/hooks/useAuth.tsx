@@ -19,6 +19,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string, username: string) => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -146,6 +147,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) toast({ title: "Update Failed", description: error.message, variant: "destructive" });
+    else toast({ title: "Password Updated", description: "Your password has been successfully updated." });
+
+    return { error };
+  };
+
   const signOut = async () => {
     // Always fetch latest session before signing out
     const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -166,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, session, profile, signIn, signUp, resetPassword, signOut, loading };
+  const value = { user, session, profile, signIn, signUp, resetPassword, updatePassword, signOut, loading };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

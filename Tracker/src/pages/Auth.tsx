@@ -20,11 +20,21 @@ export default function Auth() {
   const [loadingForm, setLoadingForm] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
-  const { user, signIn, signUp, resetPassword, loading: authLoading } = useAuth();
+  const { user, signIn, signUp, resetPassword, updatePassword, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    // Check if the user arrived via a password reset link
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      setIsRecoveryMode(true);
+      window.location.hash = ''; // Clear hash for cleanliness
+    }
+  }, []);
 
   useEffect(() => {
     if (!isSignUp || username.length < 3) {
@@ -59,13 +69,28 @@ export default function Auth() {
     );
   }
 
-  if (user) {
+  if (user && !isRecoveryMode) {
     return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
+
+    if (isRecoveryMode) {
+      if (password !== confirmPassword) {
+        setPasswordError('Passwords do not match');
+        return;
+      }
+      setLoadingForm(true);
+      const { error } = await updatePassword(password);
+      setLoadingForm(false);
+      if (!error) {
+        setIsRecoveryMode(false);
+        navigate('/dashboard');
+      }
+      return;
+    }
 
     if (isForgotPassword) {
       setLoadingForm(true);
@@ -105,14 +130,59 @@ export default function Auth() {
           </CardTitle>
           <CardDescription className="text-lg font-medium">Track Smarter</CardDescription>
           <CardDescription>
-            {isForgotPassword
-              ? 'Reset your password'
-              : isSignUp ? 'Create your account' : 'Sign in to your account'}
+            {isRecoveryMode
+              ? 'Set your new password'
+              : isForgotPassword
+                ? 'Reset your password'
+                : isSignUp ? 'Create your account' : 'Sign in to your account'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isForgotPassword ? (
+            {isRecoveryMode ? (
+              <>
+                <div className="space-y-2 relative">
+                  <Label htmlFor="password">New Password</Label>
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="Enter completely new password"
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-9 text-gray-500 hover:text-black"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+
+                <div className="space-y-2 relative">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="Confirm your new password"
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-9 text-gray-500 hover:text-black"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                  {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                </div>
+              </>
+            ) : isForgotPassword ? (
               <div className="space-y-2">
                 <Label htmlFor="forgotEmail">Email address</Label>
                 <Input
@@ -241,34 +311,36 @@ export default function Auth() {
             <Button
               type="submit"
               className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
-              disabled={loadingForm || (isSignUp && usernameStatus !== 'available')}
+              disabled={loadingForm || (!isRecoveryMode && isSignUp && usernameStatus !== 'available')}
             >
-              {loadingForm ? 'Please wait...' : isForgotPassword ? 'Send Reset Link' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {loadingForm ? 'Please wait...' : isRecoveryMode ? 'Update Password' : isForgotPassword ? 'Send Reset Link' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
           </form>
 
-          <div className="mt-4 text-center space-y-2">
-            {isForgotPassword ? (
-              <button
-                type="button"
-                onClick={() => setIsForgotPassword(false)}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
-              >
-                Back to Sign in
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setPasswordError('');
-                }}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </button>
-            )}
-          </div>
+          {!isRecoveryMode && (
+            <div className="mt-4 text-center space-y-2">
+              {isForgotPassword ? (
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(false)}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
+                >
+                  Back to Sign in
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setPasswordError('');
+                  }}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
+                >
+                  {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                </button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
