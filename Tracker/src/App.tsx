@@ -14,7 +14,7 @@ import Maintenance from "./pages/Maintenance";
 
 const queryClient = new QueryClient();
 
-const isMaintenanceMode = false; // Maintenance mode toggle
+const isMaintenanceMode = true; // Maintenance mode toggle
 
 const RootRedirect = () => {
   const location = useLocation();
