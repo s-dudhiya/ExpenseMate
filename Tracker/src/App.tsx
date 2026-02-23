@@ -9,8 +9,11 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import Maintenance from "./pages/Maintenance";
 
 const queryClient = new QueryClient();
+
+const isMaintenanceMode = true; // Toggle this flag to enable/disable maintenance mode
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,12 +23,18 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="/profile" element={<Profile />} />
-          <Route path="*" element={<NotFound />} />
+            {isMaintenanceMode ? (
+              <Route path="*" element={<Maintenance />} />
+            ) : (
+              <>
+                <Route path="/" element={<Navigate to="/auth" replace />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="/profile" element={<Profile />} />
+                <Route path="*" element={<NotFound />} />
+              </>
+            )}
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
