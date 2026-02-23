@@ -7,6 +7,7 @@ interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
+  username: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -16,7 +17,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, username: string) => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
 }
@@ -99,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error && error.code !== 'PGRST116') console.error('Error fetching profile:', error);
-      else setProfile(data);
+      else setProfile(data as Profile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -111,16 +113,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName: string, username: string) => {
     const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectUrl, data: { full_name: fullName || '' } }
+      options: { emailRedirectTo: redirectUrl, data: { full_name: fullName, username: username } }
     });
 
     if (error) toast({ title: "Sign Up Failed", description: error.message, variant: "destructive" });
     else toast({ title: "Sign Up Successful", description: "Please check your email to confirm your account." });
+
+    return { error };
+  };
+
+  const resetPassword = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/auth?reset=true`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+
+    if (error) toast({ title: "Reset Password Failed", description: error.message, variant: "destructive" });
+    else toast({ title: "Check Your Email", description: "A password reset link has been sent to your email." });
 
     return { error };
   };
@@ -145,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, session, profile, signIn, signUp, signOut, loading };
+  const value = { user, session, profile, signIn, signUp, resetPassword, signOut, loading };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

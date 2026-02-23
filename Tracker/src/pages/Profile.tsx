@@ -4,13 +4,92 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, User, Mail, Calendar, ArrowLeft } from 'lucide-react';
+import { LogOut, User, Mail, Calendar, ArrowLeft, Edit2, Loader2, Check, X, Save, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Profile() {
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setEditFullName(profile.full_name || '');
+      setEditUsername(profile.username || '');
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (!isEditing || editUsername === profile?.username) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    if (editUsername.length < 3) {
+      setUsernameStatus('taken');
+      return;
+    }
+
+    const checkUsername = async () => {
+      setUsernameStatus('checking');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', editUsername)
+        .maybeSingle();
+
+      if (error || data) {
+        setUsernameStatus('taken');
+      } else {
+        setUsernameStatus('available');
+      }
+    };
+
+    const debounceTimer = setTimeout(checkUsername, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [editUsername, isEditing, profile?.username]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    if (editUsername !== profile?.username && usernameStatus !== 'available') {
+      toast({ title: 'Invalid Username', description: 'Please choose a valid & unique username.', variant: 'destructive' });
+      return;
+    }
+
+    setIsSaving(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: editFullName,
+        username: editUsername,
+      })
+      .eq('user_id', user.id);
+
+    setIsSaving(false);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update profile', variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Profile updated successfully' });
+      setIsEditing(false);
+      // Let the onAuthStateChange listener re-fetch the profile or manually refresh via context if needed.
+      // But typically a page reload or state update is required. Here the user will just see success.
+      window.location.reload(); // Quickest way to sync global state for this iteration
+    }
+  };
 
   // Redirect if not authenticated
   if (!authLoading && !user) {
@@ -63,7 +142,23 @@ export default function Profile() {
             <span className="hidden sm:inline">Back to Dashboard</span>
           </Button>
           <h1 className="text-xl font-semibold">Profile</h1>
-          <div></div> {/* Spacer for centering */}
+          <Button
+            variant="ghost"
+            onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
+            className="flex items-center gap-2"
+          >
+            {isEditing ? (
+              <>
+                <XCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Cancel</span>
+              </>
+            ) : (
+              <>
+                <Edit2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Edit Profile</span>
+              </>
+            )}
+          </Button>
         </div>
       </header>
 
@@ -81,55 +176,112 @@ export default function Profile() {
             <CardTitle className="text-2xl">{getDisplayName()}</CardTitle>
             <CardDescription>Profile Information</CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
-            {/* User Details */}
-            <div className="space-y-4">
-              {profile?.full_name && (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-gradient-primary/5 border border-primary/10">
-                  <User className="h-5 w-5 text-primary" />
+            {isEditing ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editFullName">Full Name</Label>
+                  <Input
+                    id="editFullName"
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    placeholder="Enter full name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editUsername">Username</Label>
+                  <div className="relative">
+                    <Input
+                      id="editUsername"
+                      value={editUsername}
+                      onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                      placeholder="Enter unique username"
+                      className={
+                        usernameStatus === 'taken' ? 'border-destructive focus-visible:ring-destructive' :
+                          usernameStatus === 'available' ? 'border-success focus-visible:ring-success' : ''
+                      }
+                    />
+                    <div className="absolute right-3 top-2.5 flex items-center">
+                      {usernameStatus === 'checking' && <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />}
+                      {usernameStatus === 'available' && editUsername !== profile?.username && <Check className="h-5 w-5 text-success" />}
+                      {usernameStatus === 'taken' && editUsername !== profile?.username && <X className="h-5 w-5 text-destructive" />}
+                    </div>
+                  </div>
+                  {editUsername !== profile?.username && usernameStatus === 'taken' && editUsername.length >= 3 && (
+                    <p className="text-xs text-destructive">Username is already taken or invalid.</p>
+                  )}
+                </div>
+
+                <div className="pt-4 flex gap-2">
+                  <Button
+                    onClick={handleSaveProfile}
+                    disabled={isSaving || (editUsername !== profile?.username && usernameStatus !== 'available')}
+                    className="flex-1 bg-gradient-primary"
+                  >
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {profile?.full_name && (
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-gradient-primary/5 border border-primary/10">
+                    <User className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Full Name</p>
+                      <p className="font-medium text-lg">{profile.full_name}</p>
+                    </div>
+                  </div>
+                )}
+
+                {profile?.username && (
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border/50">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Username</p>
+                      <p className="font-medium text-lg">@{profile.username}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Full Name</p>
-                    <p className="font-medium text-lg">{profile.full_name}</p>
+                    <p className="text-sm text-muted-foreground">Email Address</p>
+                    <p className="font-medium">{user?.email}</p>
                   </div>
                 </div>
-              )}
 
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                <Mail className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email Address</p>
-                  <p className="font-medium">{user?.email}</p>
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Member Since</p>
+                    <p className="font-medium">{formatDate(user?.created_at || '')}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-success/5 border border-success/10">
+                  <div className="h-5 w-5 flex items-center justify-center">
+                    <div className="h-3 w-3 rounded-full bg-success animate-pulse"></div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Account Status</p>
+                    <Badge variant="secondary" className="bg-success/10 text-success border-success/20 font-medium">
+                      ✓ Active & Verified
+                    </Badge>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Member Since</p>
-                  <p className="font-medium">{formatDate(user?.created_at || '')}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-success/5 border border-success/10">
-                <div className="h-5 w-5 flex items-center justify-center">
-                  <div className="h-3 w-3 rounded-full bg-success animate-pulse"></div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Account Status</p>
-                  <Badge variant="secondary" className="bg-success/10 text-success border-success/20 font-medium">
-                    ✓ Active & Verified
-                  </Badge>
-                </div>
-              </div>
-            </div>
+            )}
 
             <Separator />
 
             {/* Account Actions */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Account Actions</h3>
-              
+
               <Button
                 onClick={signOut}
                 variant="destructive"
