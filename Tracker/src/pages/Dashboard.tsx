@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User } from 'lucide-react';
+import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,9 +81,9 @@ export default function Dashboard() {
         .eq('id', id);
 
       if (error) throw error;
-      
-      setExpenses(prev => 
-        prev.map(expense => 
+
+      setExpenses(prev =>
+        prev.map(expense =>
           expense.id === id ? { ...expense, status: 'cleared' as const } : expense
         )
       );
@@ -96,6 +96,30 @@ export default function Dashboard() {
       toast({
         title: 'Error',
         description: 'Failed to update expense',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setExpenses(prev => prev.filter(expense => expense.id !== id));
+
+      toast({
+        title: 'Success',
+        description: 'Expense deleted successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete expense',
         variant: 'destructive',
       });
     }
@@ -152,11 +176,11 @@ export default function Dashboard() {
 
   const getSummary = () => {
     const filteredExpenses = applyFilters(expenses);
-    
+
     const totalPending = filteredExpenses
       .filter(e => e.status === 'pending')
       .reduce((sum, e) => sum + e.amount, 0);
-    
+
     const totalCleared = filteredExpenses
       .filter(e => e.status === 'cleared')
       .reduce((sum, e) => sum + e.amount, 0);
@@ -165,7 +189,7 @@ export default function Dashboard() {
     const tiffinPending = expenses
       .filter(e => e.category === 'tiffin' && e.status === 'pending')
       .reduce((sum, e) => sum + e.amount, 0);
-      
+
     const deliveryPending = expenses
       .filter(e => e.category === 'delivery' && e.status === 'pending')
       .reduce((sum, e) => sum + e.amount, 0);
@@ -206,9 +230,9 @@ export default function Dashboard() {
               <Plus className="h-4 w-4 mr-2" />
               Add Expense
             </Button>
-            <Button 
-              onClick={() => navigate('/profile')} 
-              variant="outline" 
+            <Button
+              onClick={() => navigate('/profile')}
+              variant="outline"
               size="sm"
               className="flex items-center gap-2"
             >
@@ -287,6 +311,7 @@ export default function Dashboard() {
                 expenses={filterExpensesByCategory(category)}
                 category={category}
                 onMarkCleared={markAsCleared}
+                onDelete={handleDelete}
                 filters={filters}
               />
             </TabsContent>
@@ -308,15 +333,17 @@ export default function Dashboard() {
   );
 }
 
-function ExpenseCategoryView({ 
-  expenses, 
-  category, 
+function ExpenseCategoryView({
+  expenses,
+  category,
   onMarkCleared,
+  onDelete,
   filters
 }: {
   expenses: Expense[];
   category: string;
   onMarkCleared: (id: string) => void;
+  onDelete: (id: string) => void;
   filters: FilterOptions;
 }) {
   const pendingExpenses = expenses.filter(e => e.status === 'pending');
@@ -324,15 +351,15 @@ function ExpenseCategoryView({
 
   if (expenses.length === 0) {
     const isFiltered = filters.timeRange !== 'all' || filters.status !== 'all';
-    const message = isFiltered 
+    const message = isFiltered
       ? `No ${categoryConfig[category as keyof typeof categoryConfig]?.label} expenses found for selected filters`
       : `No ${categoryConfig[category as keyof typeof categoryConfig]?.label} expenses yet`;
-    
+
     return (
-        <EmptyState 
-          category={category}
-          message={message}
-        />
+      <EmptyState
+        category={category}
+        message={message}
+      />
     );
   }
 
@@ -354,6 +381,7 @@ function ExpenseCategoryView({
                 key={expense.id}
                 expense={expense}
                 onMarkCleared={onMarkCleared}
+                onDelete={onDelete}
               />
             ))}
           </div>
@@ -372,7 +400,11 @@ function ExpenseCategoryView({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {clearedExpenses.map(expense => (
-              <ExpenseCard key={expense.id} expense={expense} />
+              <ExpenseCard
+                key={expense.id}
+                expense={expense}
+                onDelete={onDelete}
+              />
             ))}
           </div>
         )}
@@ -381,12 +413,14 @@ function ExpenseCategoryView({
   );
 }
 
-function ExpenseCard({ 
-  expense, 
-  onMarkCleared 
-}: { 
-  expense: Expense; 
+function ExpenseCard({
+  expense,
+  onMarkCleared,
+  onDelete
+}: {
+  expense: Expense;
   onMarkCleared?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const config = categoryConfig[expense.category as keyof typeof categoryConfig];
   const Icon = config?.icon || Receipt;
@@ -399,14 +433,26 @@ function ExpenseCard({
             <Icon className="h-5 w-5 text-primary" />
             <span className="font-medium">{config?.label || expense.category}</span>
           </div>
-          <Badge 
-            variant={expense.status === 'pending' ? 'default' : 'secondary'}
-            className={expense.status === 'pending' ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}
-          >
-            {expense.status === 'pending' ? 'Pending' : 'Cleared'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={expense.status === 'pending' ? 'default' : 'secondary'}
+              className={expense.status === 'pending' ? 'bg-warning text-warning-foreground' : 'bg-success text-success-foreground'}
+            >
+              {expense.status === 'pending' ? 'Pending' : 'Cleared'}
+            </Badge>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                onClick={() => onDelete(expense.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
-        
+
         <div className="space-y-2">
           <div className="text-2xl font-bold">₹{expense.amount}</div>
           {expense.note && (

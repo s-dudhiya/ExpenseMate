@@ -24,6 +24,7 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
   const [category, setCategory] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState<string>('');
+  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -50,6 +51,7 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
         amount: parseInt(amount),
         note: note || null,
         status: 'pending',
+        created_at: new Date(date).toISOString(),
       });
 
       if (error) throw error;
@@ -101,6 +103,17 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
               placeholder="Enter amount"
               required
               min="1"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
             />
           </div>
 
