@@ -14,11 +14,11 @@ interface AddExpenseFormProps {
   onSuccess: () => void;
 }
 
-const categoryAmounts = {
-  tiffin: 90,
-  delivery: 15,
-  miscellaneous: 0,
-};
+// const categoryAmounts = {
+//   tiffin: 90,
+//   delivery: 15,
+//   miscellaneous: 0,
+// };
 
 export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
   const [category, setCategory] = useState<string>('');
@@ -31,11 +31,9 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
 
   const handleCategoryChange = (value: string) => {
     setCategory(value);
-    if (value !== 'miscellaneous') {
-      setAmount(categoryAmounts[value as keyof typeof categoryAmounts].toString());
-    } else {
+     
       setAmount('');
-    }
+   
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
