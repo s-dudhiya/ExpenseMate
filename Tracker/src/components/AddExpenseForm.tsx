@@ -28,7 +28,6 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
 
   const [category, setCategory] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
-  const [note, setNote] = useState<string>('');
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
@@ -73,10 +72,7 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
     }
   };
 
-  const handleCategoryChange = (value: string) => {
-    setCategory(value);
-    setAmount('');
-  };
+  // No special category change handler needed anymore
 
   const toggleFriendSelection = (friendId: string) => {
     setSelectedFriends(prev =>
@@ -151,11 +147,10 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
       // 1. Insert Expense
       const { data: expenseData, error: expError } = await supabase.from('expenses').insert({
         user_id: user.id,
-        category,
+        category, // This is now serving as the 'Expense Name'
         amount: parsedAmount,
-        note: note || null,
         status: 'pending',
-        split_type: isSplit ? splitType : 'equal',
+        split_type: isSplit ? splitType : 'none', // Set 'none' if toggle is off
         created_at: new Date(date).toISOString(),
       }).select('id').single();
 
@@ -194,15 +189,14 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={category} onValueChange={handleCategoryChange} required>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tiffin">Tiffin</SelectItem>
-                  <SelectItem value="delivery">Delivery</SelectItem>
-                  <SelectItem value="miscellaneous">Miscellaneous</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="category">Expense Name</Label>
+              <Input
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="e.g. Goa Trip, Dinner"
+                required
+              />
             </div>
 
             <div className="space-y-2">
@@ -287,12 +281,7 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
             </div>
           )}
 
-          {category === 'miscellaneous' && (
-            <div className="space-y-2">
-              <Label htmlFor="note">Notes</Label>
-              <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a note for this expense..." rows={2} />
-            </div>
-          )}
+          {/* Removed Miscellaneous note field since expense name acts as description */}
 
           <div className="flex justify-end space-x-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

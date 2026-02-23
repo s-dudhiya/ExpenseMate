@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
+import { AddTiffinForm } from '@/components/AddTiffinForm';
 import { EmptyState } from '@/components/EmptyState';
 import { ExpenseFilters, FilterOptions } from '@/components/ExpenseFilters';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -53,8 +54,9 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddTiffinForm, setShowAddTiffinForm] = useState(false);
   const [mainTab, setMainTab] = useState('overview');
-  const [activeTab, setActiveTab] = useState('tiffin');
+  const [tiffinTab, setTiffinTab] = useState('tiffin');
   const [filters, setFilters] = useState<FilterOptions>({ timeRange: 'all', status: 'all' });
   const { toast } = useToast();
 
@@ -166,13 +168,12 @@ export default function Dashboard() {
   const filterExpensesByCategory = (category: string) => applyFilters(expenses.filter(e => e.category === category));
 
   const getSummary = () => {
-    if (!user) return { totalPending: 0, totalLent: 0, chartData: [], personalPending: 0, personalCleared: 0, tiffinPending: 0, deliveryPending: 0, splitOwe: 0, splitOwed: 0 };
+    if (!user) return { totalPending: 0, totalLent: 0, chartData: [], totalPersonalSpent: 0, tiffinPending: 0, deliveryPending: 0, splitOwe: 0, splitOwed: 0 };
     const filteredExpenses = applyFilters(expenses);
 
     let totalPending = 0;
     let totalLent = 0;
-    let personalPending = 0;
-    let personalCleared = 0;
+    let totalPersonalSpent = 0;
     let tiffinPending = 0;
     let deliveryPending = 0;
     let splitOwe = 0;
@@ -183,42 +184,51 @@ export default function Dashboard() {
 
     filteredExpenses.forEach(e => {
       const isActuallySplit = e.expense_splits && e.expense_splits.length > 0;
+      const isCreator = e.user_id === user.id;
+      const mySplit = !isCreator ? e.expense_splits?.find(s => s.user_id === user.id) : null;
+      const isTiffinOrDelivery = e.category === 'tiffin' || e.category === 'delivery';
 
-      // Only count for personal stats if it's a personal expense (no actual splits created)
-      if (!isActuallySplit) {
-        if (e.status === 'pending') {
-          personalPending += e.amount;
-          if (e.category === 'tiffin') tiffinPending += e.amount;
-          if (e.category === 'delivery') deliveryPending += e.amount;
+      // 1. Personal Ledger Tracking (Not Tiffin/Delivery)
+      if (!isTiffinOrDelivery) {
+        if (isCreator) {
+          if (!isActuallySplit) {
+            totalPersonalSpent += e.amount;
+          } else {
+            const sumOwedByOthers = e.expense_splits!.reduce((acc, s) => acc + s.amount_owed, 0);
+            totalPersonalSpent += (e.amount - sumOwedByOthers);
+          }
+        } else if (mySplit) {
+          totalPersonalSpent += mySplit.amount_owed;
         }
-        if (e.status === 'cleared') personalCleared += e.amount;
       }
 
-      if (e.user_id === user.id) { // Current user is the payer
-        if (e.expense_splits && e.expense_splits.length > 0) {
-          // This is a split expense where current user paid
-          e.expense_splits.forEach(s => {
+      // 2. Tiffin/Delivery Tracking
+      if (isTiffinOrDelivery && e.status === 'pending') {
+        if (e.category === 'tiffin') tiffinPending += e.amount;
+        if (e.category === 'delivery') deliveryPending += e.amount;
+      }
+
+      // 3. Splitwise Tracking (For debts/credits)
+      // Only for expenses we are involved in and are strictly "Pending" or involve unpaid splits
+      if (isCreator) {
+        if (isActuallySplit) {
+          e.expense_splits!.forEach(s => {
             if (!s.has_paid) {
-              totalLent += s.amount_owed; // Total amount current user is owed across all splits
-              splitOwed += s.amount_owed; // Amount current user is owed specifically from splits
+              totalLent += s.amount_owed;
+              if (!isTiffinOrDelivery) splitOwed += s.amount_owed;
             }
           });
         } else {
-          // This is a personal expense (no splits)
-          if (e.status === 'pending') {
-            totalPending += e.amount; // Total pending includes personal pending
-          }
+          if (e.status === 'pending') totalPending += e.amount;
         }
 
-        // Category totals for expenses paid by the current user
         if (categoryTotals[e.category] !== undefined) {
           categoryTotals[e.category] += e.amount;
         }
-      } else { // Current user is not the payer, might be a split participant
-        const mySplit = e.expense_splits?.find(s => s.user_id === user.id);
+      } else {
         if (mySplit && !mySplit.has_paid) {
-          totalPending += mySplit.amount_owed; // Total pending includes amounts current user owes in splits
-          splitOwe += mySplit.amount_owed; // Amount current user owes specifically in splits
+          totalPending += mySplit.amount_owed;
+          if (!isTiffinOrDelivery) splitOwe += mySplit.amount_owed;
         }
       }
     });
@@ -228,10 +238,10 @@ export default function Dashboard() {
       total: categoryTotals[key]
     }));
 
-    return { totalPending, totalLent, chartData, personalPending, personalCleared, tiffinPending, deliveryPending, splitOwe, splitOwed };
+    return { totalPending, totalLent, chartData, totalPersonalSpent, tiffinPending, deliveryPending, splitOwe, splitOwed };
   };
 
-  const { totalPending, totalLent, chartData, personalPending, personalCleared, tiffinPending, deliveryPending, splitOwe, splitOwed } = getSummary();
+  const { totalPending, totalLent, chartData, totalPersonalSpent, tiffinPending, deliveryPending, splitOwe, splitOwed } = getSummary();
 
   if (authLoading || loading || !user) {
     return (
@@ -253,9 +263,12 @@ export default function Dashboard() {
               ExpenseMate
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <Button onClick={() => setShowAddForm(true)} size="sm" className="bg-gradient-primary">
-              <Plus className="h-4 w-4 mr-2" /> Add Expense
+              <Plus className="h-4 w-4 mr-2" /> <span className="hidden sm:inline">Expense</span>
+            </Button>
+            <Button onClick={() => setShowAddTiffinForm(true)} size="sm" variant="outline" className="border-primary/20 bg-secondary/20 hover:bg-secondary/40">
+              <Plus className="h-4 w-4 mr-2" /> <span className="hidden sm:inline">Tiffin</span>
             </Button>
             <Button onClick={() => navigate('/friends')} variant="outline" size="sm" title="Friends Hub">
               <Users className="h-4 w-4" />
@@ -270,10 +283,11 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8 space-y-8">
 
         <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
-            <TabsTrigger value="overview" className="text-base">Overview</TabsTrigger>
-            <TabsTrigger value="personal" className="text-base">Personal</TabsTrigger>
-            <TabsTrigger value="splitwise" className="text-base">Splitwise</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 mb-8 h-12">
+            <TabsTrigger value="overview" className="text-sm md:text-base">Overview</TabsTrigger>
+            <TabsTrigger value="personal" className="text-sm md:text-base">Personal</TabsTrigger>
+            <TabsTrigger value="splitwise" className="text-sm md:text-base">Splitwise</TabsTrigger>
+            <TabsTrigger value="tiffin" className="text-sm md:text-base">Tiffin</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-0">
@@ -321,74 +335,36 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="personal" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-2">
-              <Card className="shadow-elegant border-warning/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <ArrowDownRight className="h-4 w-4 text-warning" /> Total Pending
+            <div className="grid grid-cols-1">
+              <Card className="shadow-elegant border-primary/20">
+                <CardHeader className="pb-3 text-center">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Lifetime Spent
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-warning">₹{personalPending.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-elegant border-success/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <ArrowUpRight className="h-4 w-4 text-success" /> Total Cleared
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-success">₹{personalCleared.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-elegant border-warning/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Utensils className="h-4 w-4 text-warning" /> Tiffin Pending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-warning">₹{tiffinPending.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-elegant border-warning/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-warning" /> Delivery Pending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-warning">₹{deliveryPending.toFixed(2)}</div>
+                <CardContent className="text-center">
+                  <div className="text-4xl font-bold text-primary">₹{totalPersonalSpent.toFixed(2)}</div>
+                  <p className="text-xs text-muted-foreground mt-2">Your actual share across all expenses</p>
                 </CardContent>
               </Card>
             </div>
             <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="tiffin" className="flex items-center gap-2"><Utensils className="h-4 w-4" /> Tiffin</TabsTrigger>
-                <TabsTrigger value="delivery" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</TabsTrigger>
-                <TabsTrigger value="miscellaneous" className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Misc</TabsTrigger>
-              </TabsList>
 
-              {Object.keys(categoryConfig).map(category => (
-                <TabsContent key={category} value={category} className="space-y-6">
-                  <ExpenseCategoryView
-                    expenses={filterExpensesByCategory(category).filter(e => !e.expense_splits || e.expense_splits.length === 0)}
-                    category={category}
-                    currentUserId={user.id}
-                    onMarkCleared={markAsCleared}
-                    onMarkSplitPaid={markSplitAsPaid}
-                    onDelete={handleDelete}
-                    filters={filters}
-                  />
-                </TabsContent>
-              ))}
-            </Tabs>
+            <div className="space-y-4">
+              {applyFilters(expenses).filter(e => e.category !== 'tiffin' && e.category !== 'delivery').length === 0 ? (
+                <EmptyState category="general" message="No personal expenses logged yet" />
+              ) : (
+                applyFilters(expenses)
+                  .filter(e => e.category !== 'tiffin' && e.category !== 'delivery')
+                  .map(expense => (
+                    <PersonalLedgerCard key={expense.id} expense={expense} currentUserId={user.id} onDelete={handleDelete} />
+                  ))
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="splitwise" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
               <Card className="shadow-elegant border-warning/20">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -411,17 +387,52 @@ export default function Dashboard() {
               </Card>
             </div>
             <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+
+            <ExpenseCategoryView
+              expenses={applyFilters(expenses).filter(e => e.expense_splits && e.expense_splits.length > 0 && e.category !== 'tiffin' && e.category !== 'delivery')}
+              category="splitwise"
+              currentUserId={user.id}
+              onMarkCleared={markAsCleared}
+              onMarkSplitPaid={markSplitAsPaid}
+              onDelete={handleDelete}
+              filters={filters}
+            />
+          </TabsContent>
+
+          <TabsContent value="tiffin" className="space-y-6 mt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+              <Card className="shadow-elegant border-warning/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Utensils className="h-4 w-4 text-warning" /> Tiffin Pending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-warning">₹{tiffinPending.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-elegant border-warning/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-warning" /> Delivery Pending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-warning">₹{deliveryPending.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+            </div>
+            <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+            <Tabs value={tiffinTab} onValueChange={setTiffinTab}>
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="tiffin" className="flex items-center gap-2"><Utensils className="h-4 w-4" /> Tiffin</TabsTrigger>
                 <TabsTrigger value="delivery" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</TabsTrigger>
-                <TabsTrigger value="miscellaneous" className="flex items-center gap-2"><Receipt className="h-4 w-4" /> Misc</TabsTrigger>
               </TabsList>
 
-              {Object.keys(categoryConfig).map(category => (
+              {['tiffin', 'delivery'].map(category => (
                 <TabsContent key={category} value={category} className="space-y-6">
                   <ExpenseCategoryView
-                    expenses={filterExpensesByCategory(category).filter(e => e.expense_splits && e.expense_splits.length > 0)}
+                    expenses={filterExpensesByCategory(category)}
                     category={category}
                     currentUserId={user.id}
                     onMarkCleared={markAsCleared}
@@ -437,7 +448,50 @@ export default function Dashboard() {
       </div>
 
       {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />}
+      {showAddTiffinForm && <AddTiffinForm onClose={() => setShowAddTiffinForm(false)} onSuccess={() => { setShowAddTiffinForm(false); fetchExpenses(); }} />}
     </div>
+  );
+}
+
+function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Expense; currentUserId: string; onDelete?: (id: string) => void }) {
+  const isCreator = expense.user_id === currentUserId;
+  let myShare = 0;
+  if (isCreator) {
+    if (expense.expense_splits && expense.expense_splits.length > 0) {
+      const otherShares = expense.expense_splits.reduce((acc, s) => acc + s.amount_owed, 0);
+      myShare = expense.amount - otherShares;
+    } else {
+      myShare = expense.amount;
+    }
+  } else {
+    const mySplit = expense.expense_splits?.find(s => s.user_id === currentUserId);
+    if (mySplit) myShare = mySplit.amount_owed;
+  }
+
+  // Hide 0 value shares or negative errors
+  if (myShare <= 0) return null;
+
+  return (
+    <Card className="shadow-sm border-l-4 border-l-primary hover:shadow-md transition-shadow">
+      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-primary" />
+            <h4 className="font-semibold text-base">{expense.category}</h4>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
+          {expense.note && <p className="text-sm text-foreground/80 mt-1">{expense.note}</p>}
+        </div>
+        <div className="flex items-center gap-4 self-end sm:self-auto">
+          <div className="text-xl font-bold">₹{myShare.toFixed(2)}</div>
+          {isCreator && onDelete && (
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8" onClick={() => onDelete(expense.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -463,7 +517,7 @@ function ExpenseCategoryView({
     return e.status === 'cleared';
   });
 
-  if (expenses.length === 0) return <EmptyState category={category} message={`No ${categoryConfig[category as keyof typeof categoryConfig]?.label} expenses found`} />;
+  if (expenses.length === 0) return <EmptyState category={category} message={`No expenses found here`} />;
 
   return (
     <div className="space-y-6">
@@ -520,7 +574,9 @@ function ExpenseCard({
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <Icon className="h-5 w-5 text-primary" />
-            <span className="font-medium">{config?.label || expense.category}</span>
+            <span className="font-medium max-w-[120px] sm:max-w-none truncate" title={expense.category}>
+              {config?.label || expense.category}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={isPending ? 'default' : 'secondary'} className={isPending ? 'bg-warning' : 'bg-success'}>
