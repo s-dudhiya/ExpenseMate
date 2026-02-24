@@ -37,6 +37,13 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [splitValues, setSplitValues] = useState<Record<string, string>>({});
+  const [paidBy, setPaidBy] = useState<string>(''); // Will initialize to user.id when available
+
+  useEffect(() => {
+    if (user && !paidBy) {
+      setPaidBy(user.id);
+    }
+  }, [user, paidBy]);
 
   useEffect(() => {
     if (user && isSplit && friends.length === 0) {
@@ -108,35 +115,57 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
     const calculatedSplits: { user_id: string, amount_owed: number }[] = [];
 
     if (isSplit) {
+      // The total pool of people splitting is: Selected Friends + Current User (if they are taking a share).
+      // When tracking debts, anyone who is NOT the `paidBy` person gets an `expense_split` row.
+      const allParticipants = [...selectedFriends, user.id]; // Everyone involved
+
       if (splitType === 'equal') {
-        const perPerson = parsedAmount / (selectedFriends.length + 1);
-        selectedFriends.forEach(fId => calculatedSplits.push({ user_id: fId, amount_owed: Number(perPerson.toFixed(2)) }));
-      } else if (splitType === 'exact') {
+        // Exclude the payer from getting a debt split. They paid.
+        const perPerson = parsedAmount / allParticipants.length;
+
+        allParticipants.forEach(pId => {
+          if (pId !== paidBy) {
+            calculatedSplits.push({ user_id: pId, amount_owed: Number(perPerson.toFixed(2)) });
+          }
+        });
+      }
+      else if (splitType === 'exact') {
         let totalAllocated = 0;
-        for (const fId of selectedFriends) {
-          const val = parseFloat(splitValues[fId] || '0');
+        for (const pId of allParticipants) {
+          if (pId === user.id && pId === paidBy) continue; // If I paid, I don't owe.
+
+          const valStr = pId === user.id ? splitValues['me'] : splitValues[pId];
+          const val = parseFloat(valStr || '0');
+
           if (isNaN(val) || val < 0) {
             toast({ title: 'Invalid split amount', variant: 'destructive' }); return;
           }
           totalAllocated += val;
-          calculatedSplits.push({ user_id: fId, amount_owed: val });
+          if (pId !== paidBy && val > 0) { // Only log debts > 0 for non-payers
+            calculatedSplits.push({ user_id: pId, amount_owed: val });
+          }
         }
-        if (totalAllocated >= parsedAmount) {
-          toast({ title: 'Amount Check Failed', description: 'Friends cannot owe more than or equal to the total expense amount.', variant: 'destructive' }); return;
+        if (totalAllocated >= parsedAmount + 0.05 || totalAllocated <= parsedAmount - 0.05) {
+          toast({ title: 'Amount Mismatch', description: 'Total allocated exact amounts must roughly equal the total expense.', variant: 'destructive' }); return;
         }
-      } else if (splitType === 'percentage') {
+      }
+      else if (splitType === 'percentage') {
         let totalPercent = 0;
-        for (const fId of selectedFriends) {
-          const val = parseFloat(splitValues[fId] || '0');
+        for (const pId of allParticipants) {
+          const valStr = pId === user.id ? splitValues['me'] : splitValues[pId];
+          const val = parseFloat(valStr || '0');
+
           if (isNaN(val) || val < 0) {
             toast({ title: 'Invalid split percentage', variant: 'destructive' }); return;
           }
           totalPercent += val;
-          const owed = (parsedAmount * (val / 100));
-          calculatedSplits.push({ user_id: fId, amount_owed: Number(owed.toFixed(2)) });
+          if (pId !== paidBy && val > 0) {
+            const owed = (parsedAmount * (val / 100));
+            calculatedSplits.push({ user_id: pId, amount_owed: Number(owed.toFixed(2)) });
+          }
         }
-        if (totalPercent >= 100) {
-          toast({ title: 'Percentage Check Failed', description: 'Friends cannot owe 100% or more combined (you must take some share).', variant: 'destructive' }); return;
+        if (totalPercent > 100.1 || totalPercent < 99.9) {
+          toast({ title: 'Percentage Mismatch', description: 'Percentages must total exactly 100%.', variant: 'destructive' }); return;
         }
       }
     }
@@ -147,10 +176,11 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
       // 1. Insert Expense
       const { data: expenseData, error: expError } = await supabase.from('expenses').insert({
         user_id: user.id,
-        category, // This is now serving as the 'Expense Name'
+        paid_by: isSplit ? paidBy : user.id,
+        category,
         amount: parsedAmount,
         status: 'pending',
-        split_type: isSplit ? splitType : 'none', // Set 'none' if toggle is off
+        split_type: isSplit ? splitType : 'none',
         created_at: new Date(date).toISOString(),
       }).select('id').single();
 
@@ -222,16 +252,31 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
           {/* SPLIT OPTIONS */}
           {isSplit && (
             <div className="space-y-4 p-4 border rounded-lg bg-card shadow-sm">
-              <div className="space-y-2">
-                <Label>Split Strategy</Label>
-                <Select value={splitType} onValueChange={(v: any) => setSplitType(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="equal">Equally (Total / Person)</SelectItem>
-                    <SelectItem value="exact">Exact Amounts</SelectItem>
-                    <SelectItem value="percentage">By Percentages</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Who Paid?</Label>
+                  <Select value={paidBy} onValueChange={(v: string) => setPaidBy(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={user?.id || 'me'}>You</SelectItem>
+                      {friends.filter(f => selectedFriends.includes(f.user_id)).map(f => (
+                        <SelectItem key={f.user_id} value={f.user_id}>{f.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Split Strategy</Label>
+                  <Select value={splitType} onValueChange={(v: any) => setSplitType(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="equal">Equally</SelectItem>
+                      <SelectItem value="exact">Exact Amounts</SelectItem>
+                      <SelectItem value="percentage">By Percentages</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -260,6 +305,7 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
                                   step="0.01"
                                   value={splitValues[friend.user_id] || ''}
                                   onChange={(e) => handleSplitValueChange(friend.user_id, e.target.value)}
+                                  disabled={paidBy === friend.user_id && splitType !== 'exact'} // Payer doesn't need to specify debt to themselves
                                 />
                                 <span className="text-xs text-muted-foreground">{splitType === 'percentage' ? '%' : '₹'}</span>
                               </div>
@@ -267,6 +313,25 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
                           </div>
                         );
                       })}
+
+                      {/* Your own split input for exact/percentage if someone else paid, or if calculating exact proportions */}
+                      {selectedFriends.length > 0 && splitType !== 'equal' && (
+                        <div className="flex items-center justify-between space-x-2 pt-2 border-t mt-2">
+                          <Label className="font-medium">Your Share</Label>
+                          <div className="flex items-center gap-1 w-24">
+                            <Input
+                              className="h-7 text-right bg-primary/10"
+                              placeholder="0"
+                              type="number"
+                              step="0.01"
+                              value={splitValues['me'] || ''}
+                              onChange={(e) => handleSplitValueChange('me', e.target.value)}
+                              disabled={paidBy === user?.id && splitType !== 'exact'} // You don't owe yourself
+                            />
+                            <span className="text-xs text-muted-foreground">{splitType === 'percentage' ? '%' : '₹'}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </ScrollArea>

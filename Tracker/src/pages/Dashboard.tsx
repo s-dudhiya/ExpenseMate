@@ -31,6 +31,7 @@ interface ExpenseSplit {
 interface Expense {
   id: string;
   user_id: string;
+  paid_by: string; // NEW FIELD
   amount: number;
   category: string;
   note?: string;
@@ -101,12 +102,27 @@ export default function Dashboard() {
     }
   };
 
-  const markSplitAsPaid = async (splitId: string) => {
+  const markSplitAsPaid = async (splitId: string, expenseId: string) => {
     try {
       const { error } = await supabase.from('expense_splits').update({ has_paid: true }).eq('id', splitId);
       if (error) throw error;
+
+      // Check if all splits for this expense are now paid
+      const parentExpense = expenses.find(e => e.id === expenseId);
+      if (parentExpense && parentExpense.expense_splits) {
+        const remainingUnpaid = parentExpense.expense_splits.filter(s => s.id !== splitId && !s.has_paid);
+        if (remainingUnpaid.length === 0) {
+          // Auto-clear the parent expense!
+          await supabase.from('expenses').update({ status: 'cleared' }).eq('id', expenseId);
+          toast({ title: 'Expense Cleared!', description: 'All splits have been settled.' });
+        } else {
+          toast({ title: 'Settled', description: 'Marked split as paid!' });
+        }
+      } else {
+        toast({ title: 'Settled', description: 'Marked split as paid!' });
+      }
+
       fetchExpenses(); // Re-fetch to update all nested states safely
-      toast({ title: 'Settled', description: 'Marked split as paid!' });
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to update split', variant: 'destructive' });
     }
@@ -154,7 +170,7 @@ export default function Dashboard() {
     if (filters.status !== 'all') {
       filtered = filtered.filter(e => {
         // Custom logic: if it's a split I owe, check my split status.
-        if (user && e.user_id !== user.id) {
+        if (user && e.paid_by !== user.id) {
           const mySplit = e.expense_splits?.find(s => s.user_id === user.id);
           if (mySplit) return filters.status === 'cleared' ? mySplit.has_paid : !mySplit.has_paid;
         }
@@ -168,7 +184,7 @@ export default function Dashboard() {
   const filterExpensesByCategory = (category: string) => applyFilters(expenses.filter(e => e.category === category));
 
   const getSummary = () => {
-    if (!user) return { totalPending: 0, totalLent: 0, chartData: [], totalPersonalSpent: 0, tiffinPending: 0, deliveryPending: 0, splitOwe: 0, splitOwed: 0 };
+    if (!user) return { totalPending: 0, totalLent: 0, chartData: [], totalPersonalSpent: 0, tiffinPending: 0, deliveryPending: 0, tiffinCleared: 0, splitOwe: 0, splitOwed: 0 };
     const filteredExpenses = applyFilters(expenses);
 
     let totalPending = 0;
@@ -176,6 +192,7 @@ export default function Dashboard() {
     let totalPersonalSpent = 0;
     let tiffinPending = 0;
     let deliveryPending = 0;
+    let tiffinCleared = 0;
     let splitOwe = 0;
     let splitOwed = 0;
 
@@ -184,13 +201,13 @@ export default function Dashboard() {
 
     filteredExpenses.forEach(e => {
       const isActuallySplit = e.expense_splits && e.expense_splits.length > 0;
-      const isCreator = e.user_id === user.id;
-      const mySplit = !isCreator ? e.expense_splits?.find(s => s.user_id === user.id) : null;
+      const isPayer = e.paid_by === user.id;
+      const mySplit = !isPayer ? e.expense_splits?.find(s => s.user_id === user.id) : null;
       const isTiffinOrDelivery = e.category === 'tiffin' || e.category === 'delivery';
 
       // 1. Personal Ledger Tracking (Not Tiffin/Delivery)
       if (!isTiffinOrDelivery) {
-        if (isCreator) {
+        if (isPayer) {
           if (!isActuallySplit) {
             totalPersonalSpent += e.amount;
           } else {
@@ -203,14 +220,19 @@ export default function Dashboard() {
       }
 
       // 2. Tiffin/Delivery Tracking
-      if (isTiffinOrDelivery && e.status === 'pending') {
-        if (e.category === 'tiffin') tiffinPending += e.amount;
-        if (e.category === 'delivery') deliveryPending += e.amount;
+      if (isTiffinOrDelivery) {
+        if (e.status === 'pending') {
+          if (e.category === 'tiffin') tiffinPending += e.amount;
+          if (e.category === 'delivery') deliveryPending += e.amount;
+        } else if (e.status === 'cleared') {
+          // Both Tiffin and Delivery count towards total cleared
+          tiffinCleared += e.amount;
+        }
       }
 
       // 3. Splitwise Tracking (For debts/credits)
       // Only for expenses we are involved in and are strictly "Pending" or involve unpaid splits
-      if (isCreator) {
+      if (isPayer) {
         if (isActuallySplit) {
           e.expense_splits!.forEach(s => {
             if (!s.has_paid) {
@@ -238,10 +260,10 @@ export default function Dashboard() {
       total: categoryTotals[key]
     }));
 
-    return { totalPending, totalLent, chartData, totalPersonalSpent, tiffinPending, deliveryPending, splitOwe, splitOwed };
+    return { totalPending, totalLent, chartData, totalPersonalSpent, tiffinPending, deliveryPending, tiffinCleared, splitOwe, splitOwed };
   };
 
-  const { totalPending, totalLent, chartData, totalPersonalSpent, tiffinPending, deliveryPending, splitOwe, splitOwed } = getSummary();
+  const { totalPending, totalLent, chartData, totalPersonalSpent, tiffinPending, deliveryPending, tiffinCleared, splitOwe, splitOwed } = getSummary();
 
   if (authLoading || loading || !user) {
     return (
@@ -400,7 +422,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="tiffin" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
               <Card className="shadow-elegant border-warning/20">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -419,6 +441,16 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-warning">₹{deliveryPending.toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-elegant border-success/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Check className="h-4 w-4 text-success" /> Total Cleared
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-success">₹{tiffinCleared.toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>
@@ -454,9 +486,9 @@ export default function Dashboard() {
 }
 
 function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Expense; currentUserId: string; onDelete?: (id: string) => void }) {
-  const isCreator = expense.user_id === currentUserId;
+  const isPayer = expense.paid_by === currentUserId;
   let myShare = 0;
-  if (isCreator) {
+  if (isPayer) {
     if (expense.expense_splits && expense.expense_splits.length > 0) {
       const otherShares = expense.expense_splits.reduce((acc, s) => acc + s.amount_owed, 0);
       myShare = expense.amount - otherShares;
@@ -470,6 +502,9 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
 
   // Hide 0 value shares or negative errors
   if (myShare <= 0) return null;
+
+  // Personal cards can be deleted by the creator (the actual logger)
+  const isCreator = expense.user_id === currentUserId;
 
   return (
     <Card className="shadow-sm border-l-4 border-l-primary hover:shadow-md transition-shadow">
@@ -499,21 +534,25 @@ function ExpenseCategoryView({
   expenses, category, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete, filters
 }: {
   expenses: Expense[]; category: string; currentUserId: string;
-  onMarkCleared: (id: string) => void; onMarkSplitPaid: (id: string) => void; onDelete: (id: string) => void; filters: FilterOptions;
+  onMarkCleared: (id: string) => void; onMarkSplitPaid: (splitId: string, expenseId: string) => void; onDelete: (id: string) => void; filters: FilterOptions;
 }) {
   const pendingExpenses = expenses.filter(e => {
-    if (e.user_id !== currentUserId) {
+    // If you didn't pay for it (you are a debtor or just the logger who owes)
+    if (e.paid_by !== currentUserId) {
       const mySplit = e.expense_splits?.find(s => s.user_id === currentUserId);
-      return mySplit && !mySplit.has_paid;
+      return mySplit ? !mySplit.has_paid : false;
     }
+    // If you DID pay for it, it's pending if the main status is pending (waiting for anyone to pay)
     return e.status === 'pending';
   });
 
   const clearedExpenses = expenses.filter(e => {
-    if (e.user_id !== currentUserId) {
+    // If you didn't pay for it (you are a debtor)
+    if (e.paid_by !== currentUserId) {
       const mySplit = e.expense_splits?.find(s => s.user_id === currentUserId);
-      return mySplit && mySplit.has_paid;
+      return mySplit ? mySplit.has_paid : false;
     }
+    // If you DID pay for it, it's only truly cleared history when everyone has paid
     return e.status === 'cleared';
   });
 
@@ -535,13 +574,15 @@ function ExpenseCategoryView({
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-success">Cleared ({clearedExpenses.length})</h3>
+        <h3 className="text-lg font-semibold mb-4 text-success">Cleared History ({clearedExpenses.length})</h3>
         {clearedExpenses.length === 0 ? (
           <Card className="p-6 text-center text-muted-foreground">No cleared expenses</Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
             {clearedExpenses.map(expense => (
-              <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} />
+              category === 'splitwise'
+                ? <SplitHistoryCard key={expense.id} expense={expense} currentUserId={currentUserId} onDelete={onDelete} />
+                : <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} />
             ))}
           </div>
         )}
@@ -554,22 +595,35 @@ function ExpenseCard({
   expense, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete
 }: {
   expense: Expense; currentUserId: string;
-  onMarkCleared?: (id: string) => void; onMarkSplitPaid?: (id: string) => void; onDelete?: (id: string) => void;
+  onMarkCleared?: (id: string) => void; onMarkSplitPaid?: (splitId: string, expenseId: string) => void; onDelete?: (id: string) => void;
 }) {
   const config = categoryConfig[expense.category as keyof typeof categoryConfig];
   const Icon = config?.icon || Receipt;
 
-  const isCreator = expense.user_id === currentUserId;
+  const isCreator = expense.user_id === currentUserId; // Can delete it
+  const isPayer = expense.paid_by === currentUserId;  // Is owed money
   const isSplitExpense = Array.isArray(expense.expense_splits) && expense.expense_splits.length > 0;
 
-  // If I didn't create it, find my specific split details
-  const mySplit = !isCreator ? expense.expense_splits?.find(s => s.user_id === currentUserId) : null;
+  // If I didn't pay for it, find my specific split details (what I owe)
+  const mySplit = !isPayer ? expense.expense_splits?.find(s => s.user_id === currentUserId) : null;
 
-  const displayAmount = isCreator ? expense.amount : (mySplit?.amount_owed || expense.amount);
-  const isPending = isCreator ? expense.status === 'pending' : (mySplit ? !mySplit.has_paid : false);
+  const displayAmount = isPayer ? expense.amount : (mySplit?.amount_owed || expense.amount);
+  const isPending = isPayer ? expense.status === 'pending' : (mySplit ? !mySplit.has_paid : false);
+
+  // Note text if someone else paid
+  let paidByNote = '';
+  if (!isPayer && expense.profiles) {
+    if (expense.paid_by !== expense.user_id) {
+      paidByNote = `Owed to a friend`;
+      // If we could perfectly join paid_by profile name, we'd use it here.
+      // For now, if paid_by is different than the creator, we just say friend.
+    } else {
+      paidByNote = `Owed to ${expense.profiles.full_name}`;
+    }
+  }
 
   return (
-    <Card className={`shadow-md hover:shadow-lg transition-shadow border-t-4 ${isCreator && isSplitExpense ? 'border-t-primary' : !isCreator ? 'border-t-warning' : 'border-t-transparent'}`}>
+    <Card className={`shadow-md hover:shadow-lg transition-shadow border-t-4 ${isPayer && isSplitExpense ? 'border-t-primary' : !isPayer ? 'border-t-warning' : 'border-t-transparent'}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -593,9 +647,9 @@ function ExpenseCard({
         <div className="space-y-1 mb-3">
           <div className="text-2xl font-bold">₹{displayAmount}</div>
 
-          {!isCreator && expense.profiles && (
+          {!isPayer && (
             <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-              <ArrowDownRight className="h-3 w-3" /> Owed to {expense.profiles.full_name}
+              <ArrowDownRight className="h-3 w-3" /> {paidByNote}
             </p>
           )}
 
@@ -603,8 +657,8 @@ function ExpenseCard({
           <p className="text-xs text-muted-foreground">{new Date(expense.created_at).toLocaleDateString()}</p>
         </div>
 
-        {/* SPLIT BREAKDOWN FOR CREATOR */}
-        {isCreator && isSplitExpense && (
+        {/* SPLIT BREAKDOWN FOR PAYER */}
+        {isPayer && isSplitExpense && (
           <div className="mt-3 pt-3 border-t space-y-2">
             <p className="text-xs font-semibold text-muted-foreground">SPLIT DETAILS</p>
             {expense.expense_splits?.map(split => (
@@ -623,15 +677,65 @@ function ExpenseCard({
 
         {/* ACTION BUTTONS */}
         <div className="mt-4">
-          {isCreator && !isSplitExpense && isPending && onMarkCleared && (
+          {isPayer && !isSplitExpense && isPending && onMarkCleared && (
             <Button onClick={() => onMarkCleared(expense.id)} size="sm" className="w-full bg-success hover:bg-success/90">
               <Check className="h-4 w-4 mr-2" /> Mark as Cleared
             </Button>
           )}
 
-          {!isCreator && mySplit && isPending && onMarkSplitPaid && (
-            <Button onClick={() => onMarkSplitPaid(mySplit.id)} size="sm" className="w-full bg-primary hover:bg-primary/90">
+          {!isPayer && mySplit && isPending && onMarkSplitPaid && (
+            <Button onClick={() => onMarkSplitPaid(mySplit.id, expense.id)} size="sm" className="w-full bg-primary hover:bg-primary/90">
               <Check className="h-4 w-4 mr-2" /> Pay ₹{mySplit.amount_owed}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expense; currentUserId: string; onDelete?: (id: string) => void }) {
+  const isPayer = expense.paid_by === currentUserId;
+  let myShare = 0;
+
+  if (isPayer) {
+    if (expense.expense_splits && expense.expense_splits.length > 0) {
+      // You lent this money out, so your "share" is the total others owed YOU
+      myShare = expense.expense_splits.reduce((acc, s) => acc + s.amount_owed, 0);
+    } else {
+      myShare = expense.amount;
+    }
+  } else {
+    // You owed this money, so your "share" was whatever you owed the payer
+    const mySplit = expense.expense_splits?.find(s => s.user_id === currentUserId);
+    if (mySplit) myShare = mySplit.amount_owed;
+  }
+
+  if (myShare <= 0) return null;
+
+  // For cleared history, anyone involved can potentially delete the log, but let's stick to the creator avoiding accidental wipes
+  const isCreator = expense.user_id === currentUserId;
+
+  return (
+    <Card className={`shadow-sm border-l-4 ${isPayer ? 'border-l-success' : 'border-l-muted'} hover:shadow-md transition-shadow opacity-90`}>
+      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={isPayer ? 'text-success border-success/30' : 'text-muted-foreground'}>Settled</Badge>
+            <h4 className="font-semibold text-base">{expense.category}</h4>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {isPayer ? `You were paid back` : `You paid back someone`}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 self-end sm:self-auto">
+          <div className={`text-xl font-bold ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>
+            {isPayer ? '+' : '-'}₹{myShare.toFixed(2)}
+          </div>
+          {isCreator && onDelete && (
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8" onClick={() => onDelete(expense.id)}>
+              <Trash2 className="h-4 w-4" />
             </Button>
           )}
         </div>
