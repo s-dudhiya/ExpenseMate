@@ -225,136 +225,141 @@ export default function Friends() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-            {/* Header */}
-            <header className="border-b bg-card/40 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40 sticky top-0 z-50 border-border/40 px-4 py-4">
-                <div className="container mx-auto flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="shrink-0">
+        <div className="min-h-screen bg-background text-foreground pb-24 md:pb-8 relative overflow-x-hidden">
+            {/* Background ambient shape */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+
+            {/* App Header */}
+            <header className="px-6 pt-8 pb-6 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-xl z-50">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 hover:bg-muted -ml-2 shrink-0" onClick={() => navigate('/dashboard')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <div className="flex items-center gap-2">
-                        <Users className="h-6 w-6 text-primary" />
-                        <h1 className="text-xl font-bold">Friends</h1>
+                    <div>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-0.5">Network</p>
+                        <h2 className="text-xl font-extrabold tracking-tight leading-none">Friends</h2>
                     </div>
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 py-8 max-w-2xl">
+            <main className="px-6 space-y-8 max-w-lg mx-auto md:max-w-3xl relative z-10 pt-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-8">
-                        <TabsTrigger value="friends" className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span className="hidden sm:inline">My Friends</span>
-                            <Badge variant="secondary" className="ml-1">{friends.length}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="add" className="flex items-center gap-2">
-                            <UserPlus className="h-4 w-4" />
-                            <span className="hidden sm:inline">Add Friend</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="requests" className="flex items-center gap-2">
-                            <Inbox className="h-4 w-4" />
-                            <span className="hidden sm:inline">Requests</span>
-                            {incomingRequests.length > 0 && (
-                                <Badge variant="destructive" className="ml-1">{incomingRequests.length}</Badge>
-                            )}
-                        </TabsTrigger>
-                    </TabsList>
+                    <div className="flex overflow-x-auto pb-6 hide-scrollbar -mx-6 px-6">
+                        <TabsList className="bg-transparent space-x-2 p-0 h-auto">
+                            <TabsTrigger value="friends" className="rounded-full px-5 py-2.5 data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-xl bg-secondary/50 font-bold border-0 transition-all flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                My Friends {friends.length > 0 && <span className="opacity-70 text-xs ml-1">({friends.length})</span>}
+                            </TabsTrigger>
+                            <TabsTrigger value="add" className="rounded-full px-5 py-2.5 data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-xl bg-secondary/50 font-bold border-0 transition-all flex items-center gap-2">
+                                <UserPlus className="h-4 w-4" />
+                                Add Friend
+                            </TabsTrigger>
+                            <TabsTrigger value="requests" className="rounded-full px-5 py-2.5 data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-xl bg-secondary/50 font-bold border-0 transition-all flex items-center gap-2">
+                                <Inbox className="h-4 w-4" />
+                                Requests {incomingRequests.length > 0 && <span className="text-destructive font-black ml-1 text-xs">+{incomingRequests.length}</span>}
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
 
-                    <TabsContent value="friends" className="space-y-4">
+                    <TabsContent value="friends" className="mt-0">
                         {friends.length === 0 ? (
-                            <Card className="text-center py-10 shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
-                                <CardContent>
-                                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                                    <p className="text-muted-foreground">You don&apos;t have any friends added yet.<br />Go to the "Add Friend" tab to connect with someone!</p>
-                                </CardContent>
-                            </Card>
+                            <div className="text-center py-16 px-6 bg-secondary/20 rounded-[2rem] border border-dashed border-border/50">
+                                <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Users className="h-8 w-8 text-muted-foreground/50" />
+                                </div>
+                                <h3 className="text-lg font-bold text-foreground mb-2">No friends yet</h3>
+                                <p className="text-sm text-muted-foreground font-medium">Head over to the Add Friend tab to connect with someone!</p>
+                            </div>
                         ) : (
-                            <div className="grid gap-4">
+                            <div className="space-y-1">
                                 {friends.map(friend => (
-                                    <Card key={friend.id} className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
-                                        <CardContent className="p-4 flex items-center justify-between">
-                                            <div>
-                                                <p className="font-semibold text-lg">{friend.profiles.full_name}</p>
-                                                <p className="text-sm text-muted-foreground font-medium">@{friend.profiles.username}</p>
+                                    <div key={friend.id} className="flex items-center justify-between p-4 group hover:bg-muted/30 transition-colors rounded-2xl">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center text-primary-foreground font-bold shadow-md shrink-0">
+                                                {friend.profiles.full_name.charAt(0).toUpperCase()}
                                             </div>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0" onClick={() => deleteConnection(friend.id)}>
-                                                <UserMinus className="h-5 w-5" />
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
+                                            <div>
+                                                <p className="font-bold text-base text-foreground leading-tight">{friend.profiles.full_name}</p>
+                                                <p className="text-xs font-medium text-muted-foreground lowercase mt-0.5">@{friend.profiles.username}</p>
+                                            </div>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-10 w-10 rounded-full transition-colors shrink-0" onClick={() => deleteConnection(friend.id)}>
+                                            <UserMinus className="h-5 w-5" />
+                                        </Button>
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </TabsContent>
 
-                    <TabsContent value="add" className="space-y-6">
-                        <Card className="shadow-sm border-border/60 bg-card/95">
-                            <CardHeader>
-                                <CardTitle>Find Friends</CardTitle>
-                                <CardDescription>Search for someone using their exact `@username`.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleSearch} className="flex gap-2">
-                                    <div className="relative flex-1">
-                                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder="e.g. john_doe"
-                                            className="pl-9 bg-card"
-                                            value={searchUsername}
-                                            onChange={(e) => setSearchUsername(e.target.value)}
-                                        />
-                                    </div>
-                                    <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-medium rounded-md" disabled={isSearching || !searchUsername.trim()}>
-                                        {isSearching ? 'Searching...' : 'Search'}
-                                    </Button>
-                                </form>
-                            </CardContent>
-                        </Card>
+                    <TabsContent value="add" className="mt-0 space-y-8">
+                        <div>
+                            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2">Find a User</h3>
+                            <form onSubmit={handleSearch} className="flex gap-3">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <Input
+                                        placeholder="e.g. john_doe"
+                                        className="pl-12 h-14 bg-secondary/50 border-0 rounded-2xl font-bold text-base placeholder:font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary shadow-inner"
+                                        value={searchUsername}
+                                        onChange={(e) => setSearchUsername(e.target.value)}
+                                    />
+                                </div>
+                                <Button type="submit" className="h-14 px-8 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-0.5" disabled={isSearching || !searchUsername.trim()}>
+                                    {isSearching ? '...' : 'Search'}
+                                </Button>
+                            </form>
+                        </div>
 
                         {searchResult && (
-                            <Card className="shadow-sm border-primary/40 bg-card/95">
-                                <CardContent className="p-4 flex items-center justify-between">
-                                    <div>
-                                        <p className="font-bold text-lg">{searchResult.full_name}</p>
-                                        <p className="text-sm text-muted-foreground font-medium">@{searchResult.username}</p>
+                            <div className="p-4 bg-primary/5 border border-primary/20 rounded-[2rem] flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold shadow-md shrink-0">
+                                        {searchResult.full_name.charAt(0).toUpperCase()}
                                     </div>
-                                    <Button onClick={() => sendRequest(searchResult.user_id)} className="bg-primary hover:bg-primary/90 transition-colors shrink-0">
-                                        Send Request
-                                    </Button>
-                                </CardContent>
-                            </Card>
+                                    <div>
+                                        <p className="font-bold text-lg text-foreground leading-tight">{searchResult.full_name}</p>
+                                        <p className="text-sm font-medium text-muted-foreground lowercase mt-0.5">@{searchResult.username}</p>
+                                    </div>
+                                </div>
+                                <Button onClick={() => sendRequest(searchResult.user_id)} className="h-10 rounded-full px-5 font-bold shadow-sm shrink-0">
+                                    <UserPlus className="h-4 w-4 mr-2" /> Request
+                                </Button>
+                            </div>
                         )}
                     </TabsContent>
 
-                    {/* TAB: REQUESTS */}
-                    <TabsContent value="requests" className="space-y-8">
+                    <TabsContent value="requests" className="mt-0 space-y-10">
                         {/* Incoming */}
                         <div>
-                            <h3 className="font-semibold mb-3 flex items-center gap-2">
-                                Incoming Requests
-                                <Badge variant="secondary">{incomingRequests.length}</Badge>
+                            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2 flex justify-between items-center">
+                                Incoming Alerts
+                                {incomingRequests.length > 0 && <span className="bg-destructive/10 text-destructive px-2 py-0.5 rounded-full">{incomingRequests.length}</span>}
                             </h3>
                             {incomingRequests.length === 0 ? (
-                                <p className="text-sm text-muted-foreground italic">No pending incoming requests.</p>
+                                <p className="text-sm text-center text-muted-foreground font-medium py-6 bg-secondary/20 rounded-3xl">No new incoming requests.</p>
                             ) : (
-                                <div className="grid gap-3">
+                                <div className="space-y-1">
                                     {incomingRequests.map(req => (
-                                        <Card key={req.id} className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
-                                            <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 hover:bg-muted/30 transition-colors rounded-[1.5rem] bg-secondary/30 gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-muted-foreground to-muted-foreground/60 flex items-center justify-center text-background font-bold shadow-sm shrink-0">
+                                                    {req.profiles.full_name.charAt(0).toUpperCase()}
+                                                </div>
                                                 <div>
-                                                    <p className="font-semibold text-lg">{req.profiles.full_name}</p>
-                                                    <p className="text-sm text-muted-foreground font-medium">@{req.profiles.username}</p>
+                                                    <p className="font-bold text-base text-foreground leading-tight">{req.profiles.full_name}</p>
+                                                    <p className="text-xs font-medium text-muted-foreground lowercase mt-0.5">@{req.profiles.username}</p>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90 transition-colors" onClick={() => updateConnectionStatus(req.id, 'accepted')}>
-                                                        <Check className="h-4 w-4 mr-1" /> Accept
-                                                    </Button>
-                                                    <Button size="sm" variant="outline" className="border-border text-destructive hover:bg-destructive/10 transition-colors" onClick={() => updateConnectionStatus(req.id, 'rejected')}>
-                                                        <X className="h-4 w-4 mr-1" /> Reject
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                            </div>
+                                            <div className="flex items-center gap-2 pl-16 sm:pl-0">
+                                                <Button size="sm" className="h-9 rounded-full px-6 bg-success hover:bg-success/90 text-success-foreground font-bold shadow-sm w-full sm:w-auto" onClick={() => updateConnectionStatus(req.id, 'accepted')}>
+                                                    Accept
+                                                </Button>
+                                                <Button size="icon" variant="outline" className="h-9 w-9 rounded-full border-border text-destructive hover:bg-destructive/10 transition-colors shrink-0" onClick={() => updateConnectionStatus(req.id, 'rejected')}>
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             )}
@@ -362,26 +367,29 @@ export default function Friends() {
 
                         {/* Outgoing */}
                         <div>
-                            <h3 className="font-semibold mb-3 flex items-center gap-2">
+                            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2 flex justify-between items-center">
                                 Sent Requests
-                                <Badge variant="secondary">{outgoingRequests.length}</Badge>
+                                {outgoingRequests.length > 0 && <span className="bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">{outgoingRequests.length}</span>}
                             </h3>
                             {outgoingRequests.length === 0 ? (
-                                <p className="text-sm text-muted-foreground italic">No pending outgoing requests.</p>
+                                <p className="text-sm text-center text-muted-foreground font-medium py-6 bg-secondary/20 rounded-3xl">No tracking outgoing requests.</p>
                             ) : (
-                                <div className="grid gap-3">
+                                <div className="space-y-1">
                                     {outgoingRequests.map(req => (
-                                        <Card key={req.id} className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
-                                            <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="font-medium text-lg">{req.profiles.full_name}</p>
-                                                    <p className="text-sm text-muted-foreground font-medium">@{req.profiles.username}</p>
+                                        <div key={req.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-2xl opacity-75">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full border border-dashed border-muted-foreground flex items-center justify-center text-muted-foreground font-bold shrink-0">
+                                                    {req.profiles.full_name.charAt(0).toUpperCase()}
                                                 </div>
-                                                <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 transition-colors" onClick={() => deleteConnection(req.id)}>
-                                                    Cancel
-                                                </Button>
-                                            </CardContent>
-                                        </Card>
+                                                <div>
+                                                    <p className="font-bold text-sm text-foreground">{req.profiles.full_name}</p>
+                                                    <p className="text-[11px] font-medium text-muted-foreground lowercase mt-0.5">Pending approval</p>
+                                                </div>
+                                            </div>
+                                            <Button size="sm" variant="ghost" className="text-destructive font-bold hover:bg-destructive/10 hover:text-destructive shrink-0 transition-colors rounded-full" onClick={() => deleteConnection(req.id)}>
+                                                Cancel
+                                            </Button>
+                                        </div>
                                     ))}
                                 </div>
                             )}

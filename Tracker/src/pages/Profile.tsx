@@ -129,170 +129,136 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      {/* Header */}
-      <header className="border-b bg-card/40 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40 sticky top-0 z-50 border-border/40">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to Dashboard</span>
+    <div className="min-h-screen bg-background text-foreground pb-28 md:pb-8 relative overflow-x-hidden">
+      {/* Background ambient shape */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* App Header */}
+      <header className="px-6 pt-8 pb-4 flex justify-between items-center sticky top-0 bg-background/80 backdrop-blur-xl z-50">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 hover:bg-muted -ml-2 shrink-0" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Profile</h1>
-          <Button
-            variant="ghost"
-            onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
-            className="flex items-center gap-2"
-          >
-            {isEditing ? (
-              <>
-                <XCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">Cancel</span>
-              </>
-            ) : (
-              <>
-                <Edit2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Edit Profile</span>
-              </>
-            )}
-          </Button>
+          <div>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-0.5">Settings</p>
+            <h2 className="text-xl font-extrabold tracking-tight leading-none">Profile</h2>
+          </div>
         </div>
+        <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 hover:bg-muted" onClick={() => setIsEditing(!isEditing)}>
+          {isEditing ? <XCircle className="h-5 w-5" /> : <Edit2 className="h-5 w-5" />}
+        </Button>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* Profile Card */}
-        <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
-          <CardHeader className="text-center pb-6">
-            <div className="flex justify-center mb-4">
-              <Avatar className="h-24 w-24 border-4 border-card shadow-sm">
-                <AvatarFallback className="text-2xl bg-secondary text-foreground">
-                  <User className="h-12 w-12 text-primary/70" />
-                </AvatarFallback>
-              </Avatar>
+      <main className="px-6 space-y-8 max-w-lg mx-auto md:max-w-xl relative z-10 pt-4">
+        {/* Profile Hero */}
+        <div className="flex flex-col items-center justify-center text-center py-2">
+          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-primary/60 p-1 mb-4 shadow-xl shadow-primary/20">
+            <div className="w-full h-full bg-background rounded-full border-4 border-background flex items-center justify-center text-primary text-3xl font-black">
+              {getInitials(getDisplayName())}
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">{getDisplayName()}</CardTitle>
-            <CardDescription className="text-base">Profile Information</CardDescription>
-          </CardHeader>
+          </div>
+          <h1 className="text-3xl font-black tracking-tighter text-foreground">{getDisplayName()}</h1>
+          <p className="text-sm font-bold text-muted-foreground mt-1 tracking-wide lowercase">@{profile?.username || 'user'}</p>
+        </div>
 
-          <CardContent className="space-y-6">
-            {isEditing ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editFullName">Full Name</Label>
+        {isEditing ? (
+          <div className="space-y-6 pt-4">
+            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-2">Edit Details</h3>
+            <div className="bg-secondary/30 rounded-3xl border border-border/40 p-5 space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="editFullName" className="text-xs font-bold uppercase tracking-wider text-foreground/70 ml-1">Full Name</Label>
+                <Input
+                  id="editFullName"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Enter full name"
+                  className="h-12 bg-background border-0 rounded-2xl font-bold shadow-inner px-4 text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editUsername" className="text-xs font-bold uppercase tracking-wider text-foreground/70 ml-1">Username</Label>
+                <div className="relative">
                   <Input
-                    id="editFullName"
-                    value={editFullName}
-                    onChange={(e) => setEditFullName(e.target.value)}
-                    placeholder="Enter full name"
+                    id="editUsername"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    placeholder="Enter unique username"
+                    className={`h-12 bg-background border-0 rounded-2xl font-bold shadow-inner px-4 text-base ${usernameStatus === 'taken' ? 'ring-2 ring-destructive/50' :
+                        usernameStatus === 'available' ? 'ring-2 ring-success/50' : ''
+                      }`}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editUsername">Username</Label>
-                  <div className="relative">
-                    <Input
-                      id="editUsername"
-                      value={editUsername}
-                      onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                      placeholder="Enter unique username"
-                      className={
-                        usernameStatus === 'taken' ? 'border-destructive focus-visible:ring-destructive' :
-                          usernameStatus === 'available' ? 'border-success focus-visible:ring-success' : ''
-                      }
-                    />
-                    <div className="absolute right-3 top-2.5 flex items-center">
-                      {usernameStatus === 'checking' && <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />}
-                      {usernameStatus === 'available' && editUsername !== profile?.username && <Check className="h-5 w-5 text-success" />}
-                      {usernameStatus === 'taken' && editUsername !== profile?.username && <X className="h-5 w-5 text-destructive" />}
-                    </div>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
+                    {usernameStatus === 'checking' && <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />}
+                    {usernameStatus === 'available' && editUsername !== profile?.username && <Check className="h-5 w-5 text-success" />}
+                    {usernameStatus === 'taken' && editUsername !== profile?.username && <X className="h-5 w-5 text-destructive" />}
                   </div>
-                  {editUsername !== profile?.username && usernameStatus === 'taken' && editUsername.length >= 3 && (
-                    <p className="text-xs text-destructive">Username is already taken or invalid.</p>
-                  )}
                 </div>
-
-                <div className="pt-4 flex gap-2">
-                  <Button
-                    onClick={handleSaveProfile}
-                    disabled={isSaving || (editUsername !== profile?.username && usernameStatus !== 'available')}
-                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-medium rounded-md"
-                  >
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Changes
-                  </Button>
-                </div>
+                {editUsername !== profile?.username && usernameStatus === 'taken' && editUsername.length >= 3 && (
+                  <p className="text-xs font-bold text-destructive pl-1 mt-1">Username is already taken or invalid.</p>
+                )}
               </div>
-            ) : (
-              <div className="space-y-4">
-                {profile?.full_name && (
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card/40 border border-border/40 backdrop-blur-md shadow-sm transition-all hover:bg-card/60">
-                    <User className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm text-muted-foreground font-medium">Full Name</p>
-                      <p className="font-semibold text-lg tracking-tight">{profile.full_name}</p>
-                    </div>
-                  </div>
-                )}
+            </div>
 
-                {profile?.username && (
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card/40 border border-border/40 backdrop-blur-md shadow-sm transition-all hover:bg-card/60">
-                    <User className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground font-medium">Username</p>
-                      <p className="font-semibold text-lg tracking-tight">@{profile.username}</p>
-                    </div>
+            <Button
+              onClick={handleSaveProfile}
+              disabled={isSaving || (editUsername !== profile?.username && usernameStatus !== 'available')}
+              className="w-full h-14 rounded-full font-bold shadow-xl shadow-primary/20 hover:shadow-primary/30 text-lg group"
+            >
+              {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />}
+              Save Changes
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-8 pt-4">
+            {/* User Details Group */}
+            <div>
+              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2">Account Info</h3>
+              <div className="bg-secondary/30 rounded-3xl border border-border/40 overflow-hidden divide-y divide-border/40">
+                <div className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Mail className="h-5 w-5 text-primary" />
                   </div>
-                )}
-
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground font-medium">Email Address</p>
-                    <p className="font-semibold text-base">{user?.email}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Email Address</p>
+                    <p className="font-bold text-foreground text-sm">{user?.email}</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground font-medium">Member Since</p>
-                    <p className="font-semibold text-base">{formatDate(user?.created_at || '')}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Since</p>
+                    <p className="font-bold text-foreground text-sm">{formatDate(user?.created_at || '')}</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-success/10 border border-success/20">
-                  <div className="h-5 w-5 flex items-center justify-center">
-                    <div className="h-2 w-2 rounded-full bg-success animate-pulse"></div>
+                <div className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+                    <div className="h-2.5 w-2.5 rounded-full bg-success animate-pulse"></div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground font-medium">Account Status</p>
-                    <p className="font-semibold text-success">Active & Verified</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Account Status</p>
+                    <p className="font-bold text-success text-sm">Active & Verified</p>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            <Separator />
-
-            {/* Account Actions */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Account Actions</h3>
-
+            {/* Actions Group */}
+            <div>
+              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2">Actions</h3>
               <Button
                 onClick={signOut}
-                variant="destructive"
-                size="lg"
-                className="w-full"
+                variant="outline"
+                className="w-full h-14 rounded-full font-bold border-destructive/20 text-destructive bg-destructive/5 hover:bg-destructive hover:text-destructive-foreground transition-all group"
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="mr-2 h-5 w-5 group-hover:-translate-x-1 transition-transform" />
                 Sign Out
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

@@ -52,7 +52,7 @@ const categoryConfig = {
 };
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -280,214 +280,162 @@ export default function Dashboard() {
     );
   }
 
+  function getDisplayName() {
+    return profile?.full_name || user?.email?.split('@')[0] || 'User';
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <header className="border-b bg-card/40 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40 sticky top-0 z-50 border-border/40">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Wallet className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="hidden sm:block text-xl font-bold tracking-tight text-foreground">
-              ExpenseMate
-            </h1>
+    <div className="min-h-screen bg-background text-foreground pb-28 md:pb-8 relative overflow-x-hidden">
+      {/* Background ambient shape */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* App Header */}
+      <header className="px-6 pt-6 pb-4 flex justify-between items-center fixed top-0 left-0 right-0 bg-background/90 md:bg-background/80 backdrop-blur-xl z-50 border-b md:border-none border-border/40 max-w-lg md:max-w-none mx-auto">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/20">
+            {getDisplayName().charAt(0).toUpperCase()}
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            <Button onClick={() => setShowAddForm(true)} size="sm" className="bg-primary hover:bg-primary/90 shadow-sm transition-all rounded-md">
-              <Plus className="h-4 w-4 mr-2" /> <span className="hidden sm:inline">Expense</span>
-            </Button>
-            <Button onClick={() => setShowAddTiffinForm(true)} size="sm" variant="outline" className="border-border bg-card hover:bg-accent/10 hover:text-accent shadow-sm transition-all rounded-md">
-              <Plus className="h-4 w-4 mr-2" /> <span className="hidden sm:inline">Tiffin</span>
-            </Button>
-            <Button onClick={() => navigate('/friends')} variant="outline" size="sm" title="Friends Hub" className="border-border bg-card hover:bg-muted shadow-sm rounded-md">
-              <Users className="h-4 w-4" />
-            </Button>
-            <Button onClick={() => navigate('/profile')} variant="outline" size="sm" title="Profile Settings" className="border-border bg-card hover:bg-muted shadow-sm rounded-md">
-              <User className="h-4 w-4" />
-            </Button>
+          <div>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-0.5">Welcome back</p>
+            <h2 className="text-base font-extrabold tracking-tight leading-none">{getDisplayName()}</h2>
           </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted w-10 h-10" onClick={() => navigate('/friends')} title="Friends">
+            <Users className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted w-10 h-10" onClick={() => navigate('/profile')} title="Profile">
+            <User className="h-5 w-5" />
+          </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 pb-32 md:pb-8 space-y-8 max-w-7xl">
+      <main className="px-6 space-y-8 max-w-lg mx-auto md:max-w-3xl relative z-10 pt-24">
 
-        <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-          {/* Desktop Only Tabs */}
-          <div className="w-full mb-6 sm:mb-8 hidden md:block">
-            <TabsList className="grid w-full grid-cols-4 h-12 bg-muted/50 p-1 rounded-lg">
-              <TabsTrigger value="overview" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Overview</TabsTrigger>
-              <TabsTrigger value="personal" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Personal</TabsTrigger>
-              <TabsTrigger value="splitwise" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Splitwise</TabsTrigger>
-              <TabsTrigger value="tiffin" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Tiffin / Delivery</TabsTrigger>
-            </TabsList>
+        {/* Core Balance Hero */}
+        <div className="flex flex-col items-center justify-center text-center py-2">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
+            Net Balance
+          </p>
+          <h1 className="text-6xl font-black tracking-tighter text-foreground flex items-center justify-center">
+            <span className="text-3xl font-bold text-muted-foreground mr-1.5 -translate-y-2">₹</span>
+            {Math.abs(totalLent - totalPending).toFixed(2)}
+          </h1>
+          <div className="mt-6 flex gap-3 text-sm font-bold">
+            <div className="flex items-center gap-1.5 bg-success/10 text-success px-4 py-1.5 rounded-full">
+              <ArrowUpRight className="h-4 w-4" /> ₹{totalLent.toFixed(2)}
+            </div>
+            <div className="flex items-center gap-1.5 bg-warning/10 text-warning px-4 py-1.5 rounded-full">
+              <ArrowDownRight className="h-4 w-4" /> ₹{totalPending.toFixed(2)}
+            </div>
           </div>
+        </div>
 
-          <TabsContent value="overview" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-warning/50 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe / Pending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{totalPending.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-success/50 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{totalLent.toFixed(2)}</div>
-                </CardContent>
-              </Card>
+        {/* Quick Action Pills */}
+        <div className="flex justify-center gap-3">
+          <Button onClick={() => setShowAddForm(true)} className="rounded-full px-6 h-12 shadow-xl shadow-primary/20 hover:shadow-primary/30 font-bold hover:-translate-y-0.5 transition-all">
+            <Plus className="mr-2 h-4 w-4" /> Add Expense
+          </Button>
+          <Button onClick={() => setShowAddTiffinForm(true)} variant="secondary" className="rounded-full px-6 h-12 font-bold bg-secondary/60 hover:bg-secondary hover:-translate-y-0.5 transition-all">
+            <Utensils className="mr-2 h-4 w-4" /> Tiffin
+          </Button>
+        </div>
+
+        <div className="pt-4">
+          <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
+            <div className="hidden md:flex overflow-x-auto pb-6 hide-scrollbar -mx-6 px-6">
+              <TabsList className="bg-transparent space-x-2 p-0 h-auto">
+                {['overview', 'personal', 'splitwise', 'tiffin'].map(tab => (
+                  <TabsTrigger
+                    key={tab}
+                    value={tab}
+                    className="rounded-full px-5 py-2.5 data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-xl bg-secondary/50 font-bold border-0 capitalize transition-all"
+                  >
+                    {tab === 'tiffin' ? 'Food Log' : tab}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
 
-            <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
-              <CardHeader>
-                <CardTitle>Spending by Category</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px] w-full">
+            <TabsContent value="overview" className="mt-0">
+              <div className="mb-8">
+                <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-6 px-2">Spending by Category</h3>
+                <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                      <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `₹${value}`} />
-                      <Tooltip cursor={{ fill: 'transparent' }} formatter={(value) => [`₹${value}`, 'Total']} />
-                      <Bar dataKey="total" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    <BarChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" opacity={0.2} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 600 }} dy={10} />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)', fontWeight: 'bold' }} />
+                      <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </TabsContent>
 
-          <TabsContent value="personal" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1">
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
-                <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                    Total Lifetime Spent
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <div className="text-5xl font-extrabold tracking-tighter text-foreground bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent pb-1">₹{totalPersonalSpent.toFixed(2)}</div>
-                  <p className="text-sm text-muted-foreground mt-2 font-medium">Your actual share across all expenses</p>
-                </CardContent>
-              </Card>
-            </div>
-            <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+            <TabsContent value="personal" className="mt-0 space-y-8">
+              <div className="text-center py-6 bg-secondary/30 rounded-3xl border border-border/40">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Total Lifetime Spent</p>
+                <div className="text-4xl font-black tracking-tighter text-foreground">₹{totalPersonalSpent.toFixed(2)}</div>
+              </div>
 
-            <div className="space-y-4">
-              {applyFilters(expenses).filter(e => e.category !== 'tiffin' && e.category !== 'delivery').length === 0 ? (
-                <EmptyState category="general" message="No personal expenses logged yet" />
-              ) : (
-                applyFilters(expenses)
-                  .filter(e => e.category !== 'tiffin' && e.category !== 'delivery')
-                  .map(expense => (
-                    <PersonalLedgerCard key={expense.id} expense={expense} currentUserId={user.id} onDelete={handleDelete} />
-                  ))
-              )}
-            </div>
-          </TabsContent>
+              <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
 
-          <TabsContent value="splitwise" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-2">
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-warning/50 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{splitOwe.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-success/50 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{splitOwed.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-            </div>
-            <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+              <div className="space-y-4">
+                <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2">Personal Activity Feed</h3>
+                {expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery').length === 0 ? (
+                  <div className="text-center py-10 px-4 text-muted-foreground font-medium bg-secondary/20 rounded-3xl">No personal expenses logged yet</div>
+                ) : (
+                  <div className="space-y-1">
+                    {expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery').map(expense => (
+                      <PersonalLedgerCard key={expense.id} expense={expense} currentUserId={user.id} onDelete={handleDelete} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
 
-            <ExpenseCategoryView
-              expenses={applyFilters(expenses).filter(e => e.expense_splits && e.expense_splits.length > 0 && e.category !== 'tiffin' && e.category !== 'delivery')}
-              category="splitwise"
-              currentUserId={user.id}
-              onMarkCleared={markAsCleared}
-              onMarkSplitPaid={markSplitAsPaid}
-              onDelete={handleDelete}
-              filters={filters}
-            />
-          </TabsContent>
+            <TabsContent value="splitwise" className="mt-0">
+              <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+              <div className="mt-6">
+                <ExpenseCategoryView expenses={expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery')} category="splitwise" currentUserId={user.id} onMarkCleared={markAsCleared} onMarkSplitPaid={markSplitAsPaid} onDelete={handleDelete} filters={filters} />
+              </div>
+            </TabsContent>
 
-          <TabsContent value="tiffin" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-2">
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Utensils className="h-4 w-4 text-muted-foreground" /> Tiffin Pending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{tiffinPending.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-muted-foreground" /> Delivery Pending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{deliveryPending.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                    <Check className="h-4 w-4 text-success" /> Total Cleared
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{tiffinCleared.toFixed(2)}</div>
-                </CardContent>
-              </Card>
-            </div>
-            <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
-            <Tabs value={tiffinTab} onValueChange={setTiffinTab}>
-              <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-lg h-12">
-                <TabsTrigger value="tiffin" className="rounded-md data-[state=active]:shadow-sm flex items-center gap-2"><Utensils className="h-4 w-4 hidden sm:block" /> Tiffin</TabsTrigger>
-                <TabsTrigger value="delivery" className="rounded-md data-[state=active]:shadow-sm flex items-center gap-2"><Truck className="h-4 w-4 hidden sm:block" /> Delivery</TabsTrigger>
-              </TabsList>
+            <TabsContent value="tiffin" className="mt-0">
+              <div className="grid grid-cols-3 gap-2 mb-8">
+                <div className="bg-warning/10 border border-warning/20 p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-center flex flex-col justify-center">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-warning uppercase tracking-widest mb-1">Tiffin Pending</p>
+                  <p className="text-lg sm:text-2xl font-black text-warning">₹{tiffinPending.toFixed(2)}</p>
+                </div>
+                <div className="bg-warning/10 border border-warning/20 p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-center flex flex-col justify-center">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-warning uppercase tracking-widest mb-1">Delivery Pending</p>
+                  <p className="text-lg sm:text-2xl font-black text-warning">₹{deliveryPending.toFixed(2)}</p>
+                </div>
+                <div className="bg-success/10 border border-success/20 p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-center flex flex-col justify-center">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-success uppercase tracking-widest mb-1">Cleared</p>
+                  <p className="text-lg sm:text-2xl font-black text-success">₹{tiffinCleared.toFixed(2)}</p>
+                </div>
+              </div>
 
-              {['tiffin', 'delivery'].map(category => (
-                <TabsContent key={category} value={category} className="space-y-6">
-                  <ExpenseCategoryView
-                    expenses={filterExpensesByCategory(category)}
-                    category={category}
-                    currentUserId={user.id}
-                    onMarkCleared={markAsCleared}
-                    onMarkSplitPaid={markSplitAsPaid}
-                    onDelete={handleDelete}
-                    filters={filters}
-                  />
-                </TabsContent>
-              ))}
-            </Tabs>
-          </TabsContent>
-        </Tabs>
-      </div>
+              <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+
+              <Tabs value={tiffinTab} onValueChange={setTiffinTab} className="mt-8">
+                <TabsList className="flex mb-6 bg-secondary/40 p-1 rounded-full w-fit mx-auto h-auto">
+                  <TabsTrigger value="tiffin" className="rounded-full px-6 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm font-bold text-sm">Tiffin</TabsTrigger>
+                  <TabsTrigger value="delivery" className="rounded-full px-6 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm font-bold text-sm">Delivery</TabsTrigger>
+                </TabsList>
+
+                {['tiffin', 'delivery'].map(category => (
+                  <TabsContent key={category} value={category} className="mt-0">
+                    <ExpenseCategoryView expenses={filterExpensesByCategory(category)} category={category} currentUserId={user.id} onMarkCleared={markAsCleared} onMarkSplitPaid={markSplitAsPaid} onDelete={handleDelete} filters={filters} />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
 
       {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />}
       {showAddTiffinForm && <AddTiffinForm onClose={() => setShowAddTiffinForm(false)} onSuccess={() => { setShowAddTiffinForm(false); fetchExpenses(); }} />}
@@ -519,29 +467,28 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
   const isCreator = expense.user_id === currentUserId;
 
   return (
-    <Card className="shadow-sm border border-border/40 hover:border-primary/50 transition-all duration-300 bg-card/40 backdrop-blur-xl relative overflow-hidden group">
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/40 group-hover:bg-primary transition-colors"></div>
-      <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-primary/10 p-1.5 rounded-md shrink-0">
-              <Receipt className="h-4 w-4 text-primary" />
-            </div>
-            <h4 className="font-semibold text-base text-foreground truncate">{expense.category}</h4>
+    <div className="flex items-center justify-between p-4 group hover:bg-muted/30 transition-colors rounded-2xl cursor-pointer">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="h-12 w-12 rounded-[1rem] bg-secondary flex items-center justify-center shrink-0">
+          <Receipt className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 pr-4">
+          <h4 className="font-bold text-base text-foreground capitalize truncate">{expense.category}</h4>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{new Date(expense.created_at).toLocaleDateString()}</span>
+            {expense.note && <span className="text-xs font-medium text-muted-foreground truncate hidden sm:inline-block">• {expense.note}</span>}
           </div>
-          <p className="text-xs text-muted-foreground mt-2 font-medium">{new Date(expense.created_at).toLocaleDateString()}</p>
-          {expense.note && <p className="text-sm text-foreground/70 mt-1 line-clamp-2">{expense.note}</p>}
         </div>
-        <div className="flex items-center gap-4 self-end sm:self-auto shrink-0">
-          <div className="text-2xl sm:text-3xl font-extrabold tracking-tighter">₹{myShare.toFixed(2)}</div>
-          {isCreator && onDelete && (
-            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors" onClick={() => onDelete(expense.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="text-xl font-bold tracking-tighter text-foreground">₹{myShare.toFixed(2)}</span>
+        {isCreator && onDelete && (
+          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors md:opacity-0 group-hover:opacity-100" onClick={() => onDelete(expense.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -574,13 +521,16 @@ function ExpenseCategoryView({
   if (expenses.length === 0) return <EmptyState category={category} message={`No expenses found here`} />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 mt-4">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-warning">Pending ({pendingExpenses.length})</h3>
+        <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2 flex items-center justify-between">
+          <span>Pending Actions</span>
+          <span className="bg-warning/10 text-warning px-2 py-0.5 rounded-full">{pendingExpenses.length}</span>
+        </h3>
         {pendingExpenses.length === 0 ? (
-          <Card className="p-6 text-center text-muted-foreground">No pending dues</Card>
+          <div className="text-center py-6 px-4 text-muted-foreground font-medium border border-dashed rounded-3xl">All caught up</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1">
             {pendingExpenses.map(expense => (
               <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkCleared={onMarkCleared} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} />
             ))}
@@ -589,11 +539,14 @@ function ExpenseCategoryView({
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-success">Cleared History ({clearedExpenses.length})</h3>
+        <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2 flex items-center justify-between">
+          <span>History</span>
+          <span className="bg-success/10 text-success px-2 py-0.5 rounded-full">{clearedExpenses.length}</span>
+        </h3>
         {clearedExpenses.length === 0 ? (
-          <Card className="p-6 text-center text-muted-foreground">No cleared expenses</Card>
+          <div className="text-center py-6 px-4 text-muted-foreground font-medium border border-dashed rounded-3xl">No cleared history</div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-1">
             {clearedExpenses.map(expense => (
               category === 'splitwise'
                 ? <SplitHistoryCard key={expense.id} expense={expense} currentUserId={currentUserId} onDelete={onDelete} />
@@ -636,94 +589,89 @@ function ExpenseCard({
   }
 
   return (
-    <Card className="shadow-sm border border-border/40 hover:border-primary/50 transition-all duration-300 bg-card/40 backdrop-blur-xl relative overflow-hidden group">
-      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isPayer && isSplitExpense ? 'bg-primary/40 group-hover:bg-primary' : !isPayer ? 'bg-warning/40 group-hover:bg-warning' : 'bg-transparent'}`}></div>
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2.5 min-w-0 pr-3">
-            <div className="bg-primary/10 p-1.5 rounded-md shrink-0">
-              <Icon className="h-4 w-4 text-primary" />
-            </div>
-            <span className="font-semibold text-base truncate" title={expense.category}>
+    <div className="p-4 sm:p-5 hover:bg-muted/30 transition-colors rounded-3xl border border-border/40 bg-card/40 relative overflow-hidden group mb-3 shadow-sm">
+      <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${isPayer && isSplitExpense ? 'bg-primary' : !isPayer ? 'bg-warning' : 'bg-transparent'}`}></div>
+
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-3.5 min-w-0 pr-3">
+          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-[1rem] bg-secondary flex items-center justify-center shrink-0">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="min-w-0">
+            <span className="font-bold text-base truncate block w-full" title={expense.category}>
               {config?.label || expense.category}
             </span>
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">{new Date(expense.created_at).toLocaleDateString()}</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className={`font-medium ${isPending ? 'border-warning/50 text-warning bg-warning/5' : 'border-success/50 text-success bg-success/5'}`}>
-              {isPending ? 'Pending' : 'Cleared'}
-            </Badge>
-            {isCreator && onDelete && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10 -mr-2" onClick={() => onDelete(expense.id)}>
-                <Trash2 className="h-4 w-4" />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="text-right">
+            <div className="text-xl sm:text-2xl font-black tracking-tighter text-foreground">₹{displayAmount}</div>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${isPending ? 'text-warning' : 'text-success'}`}>{isPending ? 'Pending' : 'Cleared'}</span>
+          </div>
+          {isCreator && onDelete && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => onDelete(expense.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-1.5 pl-14 sm:pl-16">
+        {!isPayer ? (
+          <p className="text-xs font-bold text-warning flex items-center gap-1.5">
+            <ArrowDownRight className="h-3.5 w-3.5" /> {paidByNote}
+          </p>
+        ) : isSplitExpense && isPending ? (
+          <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+            <ArrowUpRight className="h-3.5 w-3.5" /> {paidByNote}
+          </p>
+        ) : null}
+        {expense.note && <p className="text-sm font-medium text-foreground/80 mt-1 line-clamp-2">{expense.note}</p>}
+      </div>
+
+      {isPayer && isSplitExpense && (
+        <div className="mt-4 pt-4 border-t border-border/50 pl-14 sm:pl-16 space-y-2.5">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Split Details</p>
+          {expense.expense_splits?.map(split => (
+            <div key={split.id} className="flex items-center justify-between text-sm font-medium">
+              <span className="text-foreground/80">{split.profiles?.full_name}</span>
+              <span className="flex items-center gap-2">
+                ₹{split.amount_owed}
+                {split.has_paid
+                  ? <span className="bg-success/10 text-success text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">Paid</span>
+                  : <span className="text-warning text-[10px] font-bold uppercase tracking-wider bg-warning/10 px-2 py-0.5 rounded-full">Owes</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ACTION BUTTONS */}
+      <div className="mt-5 pl-14 sm:pl-16 flex flex-col sm:flex-row gap-2">
+        {isPayer && !isSplitExpense && isPending && onMarkCleared && (
+          <Button onClick={() => onMarkCleared(expense.id)} size="sm" className="w-full sm:w-auto rounded-full font-bold px-5 bg-success hover:bg-success/90">
+            Mark as Cleared
+          </Button>
+        )}
+
+        {!isPayer && mySplit && isPending && onMarkSplitPaid && (
+          <Button onClick={() => onMarkSplitPaid(mySplit.id, expense.id)} size="sm" className="w-full sm:w-auto rounded-full font-bold px-5 bg-primary hover:bg-primary/90 text-primary-foreground">
+            Pay ₹{mySplit.amount_owed}
+          </Button>
+        )}
+
+        {isPayer && isSplitExpense && isPending && onMarkSplitPaid && (
+          <div className="flex flex-wrap gap-2 w-full">
+            {expense.expense_splits?.filter(s => !s.has_paid).map(split => (
+              <Button key={split.id} onClick={() => onMarkSplitPaid(split.id, expense.id)} size="sm" variant="outline" className="border-success text-success hover:bg-success/10 flex-1 sm:flex-none rounded-full font-bold px-5">
+                Mark {split.profiles?.full_name}'s Share
               </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-1.5 mb-4">
-          <div className="text-3xl sm:text-4xl font-extrabold tracking-tighter">₹{displayAmount}</div>
-
-          {!isPayer ? (
-            <p className="text-sm font-medium text-warning flex items-center gap-1.5">
-              <ArrowDownRight className="h-3.5 w-3.5" /> {paidByNote}
-            </p>
-          ) : isSplitExpense && isPending ? (
-            <p className="text-sm font-medium text-primary flex items-center gap-1.5">
-              <ArrowUpRight className="h-3.5 w-3.5" /> {paidByNote}
-            </p>
-          ) : null}
-
-          {expense.note && <p className="text-sm text-foreground/70 mt-2 line-clamp-2">{expense.note}</p>}
-          <p className="text-xs font-medium text-muted-foreground pt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
-        </div>
-
-        {/* SPLIT BREAKDOWN FOR PAYER */}
-        {isPayer && isSplitExpense && (
-          <div className="mt-3 pt-3 border-t space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground">SPLIT DETAILS</p>
-            {expense.expense_splits?.map(split => (
-              <div key={split.id} className="flex items-center justify-between text-sm">
-                <span>{split.profiles?.full_name}</span>
-                <span className="flex items-center gap-2">
-                  ₹{split.amount_owed}
-                  {split.has_paid
-                    ? <Badge variant="secondary" className="bg-success/20 text-success text-[10px] px-1 py-0">Paid</Badge>
-                    : <Badge variant="outline" className="text-warning text-[10px] px-1 py-0">Owes</Badge>}
-                </span>
-              </div>
             ))}
           </div>
         )}
-
-        {/* ACTION BUTTONS */}
-        <div className="mt-4">
-          {/* Solo expense cleared by creator */}
-          {isPayer && !isSplitExpense && isPending && onMarkCleared && (
-            <Button onClick={() => onMarkCleared(expense.id)} size="sm" className="w-full bg-success hover:bg-success/90">
-              <Check className="h-4 w-4 mr-2" /> Mark as Cleared
-            </Button>
-          )}
-
-          {/* Debtor paying their specific split */}
-          {!isPayer && mySplit && isPending && onMarkSplitPaid && (
-            <Button onClick={() => onMarkSplitPaid(mySplit.id, expense.id)} size="sm" className="w-full bg-primary hover:bg-primary/90">
-              <Check className="h-4 w-4 mr-2" /> Pay ₹{mySplit.amount_owed}
-            </Button>
-          )}
-
-          {/* Payer settling up a pending split on behalf of someone else (e.g. they handed them cash) */}
-          {isPayer && isSplitExpense && isPending && onMarkSplitPaid && (
-            <div className="flex flex-col gap-2">
-              {expense.expense_splits?.filter(s => !s.has_paid).map(split => (
-                <Button key={split.id} onClick={() => onMarkSplitPaid(split.id, expense.id)} size="sm" variant="outline" className="w-full border-success text-success hover:bg-success/10">
-                  <Check className="h-4 w-4 mr-2" /> Mark {split.profiles?.full_name}'s ₹{split.amount_owed} as Settled
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -749,33 +697,34 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
   // For cleared history, anyone involved can potentially delete the log, but let's stick to the creator avoiding accidental wipes
   const isCreator = expense.user_id === currentUserId;
 
+  const Icon = categoryConfig[expense.category as keyof typeof categoryConfig]?.icon || Receipt;
+
   return (
-    <Card className="shadow-sm border border-border/40 hover:border-primary/50 transition-all duration-300 bg-card/40 backdrop-blur-xl relative overflow-hidden group">
-      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isPayer ? 'bg-success/40 group-hover:bg-success' : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/50'}`}></div>
-      <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline" className={`font-medium ${isPayer ? 'text-success border-success/30 bg-success/5' : 'text-muted-foreground border-border bg-muted'}`}>Settled</Badge>
-            <h4 className="font-semibold text-base truncate">{expense.category}</h4>
+    <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-2xl cursor-pointer opacity-75 hover:opacity-100">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="h-10 w-10 rounded-[1rem] bg-secondary flex items-center justify-center shrink-0">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 pr-4">
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md ${isPayer ? 'text-success bg-success/10' : 'text-muted-foreground bg-muted'}`}>Settled</span>
+            <h4 className="font-bold text-sm text-foreground capitalize truncate">{expense.category}</h4>
           </div>
-          <p className="text-xs font-medium text-muted-foreground">{new Date(expense.created_at).toLocaleDateString()}</p>
-          <p className="text-sm text-foreground/80 mt-1.5">
+          <p className="text-[11px] font-medium text-muted-foreground mt-1">
             {isPayer
-              ? <span className="text-success"><span className="text-muted-foreground block text-xs mb-0.5">Paid by:</span> {expense.expense_splits?.map(s => s.profiles?.full_name).join(', ') || 'someone'}</span>
-              : <span className="text-muted-foreground"><span className="block text-xs mb-0.5">Paid to:</span> {expense.payer_profile?.full_name || 'someone'}</span>}
+              ? `From ${expense.expense_splits?.map(s => s.profiles?.full_name).join(', ') || 'someone'}`
+              : `To ${expense.payer_profile?.full_name || 'someone'}`}
           </p>
         </div>
-        <div className="flex items-center gap-4 self-end sm:self-auto shrink-0">
-          <div className={`text-2xl sm:text-3xl font-extrabold tracking-tighter ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>
-            {isPayer ? '+' : '-'}₹{myShare.toFixed(2)}
-          </div>
-          {isCreator && onDelete && (
-            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors" onClick={() => onDelete(expense.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        <span className={`text-lg font-bold tracking-tighter ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>{isPayer ? '+' : '-'}₹{myShare.toFixed(2)}</span>
+        {isCreator && onDelete && (
+          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors" onClick={() => onDelete(expense.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }

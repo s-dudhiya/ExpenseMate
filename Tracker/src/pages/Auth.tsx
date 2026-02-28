@@ -150,27 +150,67 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4 selection:bg-primary/20">
-      <Card className="w-full max-w-md shadow-elegant border-border/50 rounded-xl overflow-hidden bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
-        <CardHeader className="text-center space-y-3 pb-6 border-b border-border/50 bg-muted/20">
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-background">
+      {/* Left side: Branding / Immersive (Hidden on mobile) */}
+      <div className="hidden md:flex md:w-1/2 bg-primary p-12 flex-col justify-between relative overflow-hidden">
+        {/* Abstract ambient shapes */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-black/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold text-primary-foreground tracking-tight flex items-center gap-2">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+              <div className="w-4 h-4 bg-primary rounded-sm" />
+            </div>
             ExpenseMate
-          </CardTitle>
-          <CardDescription className="text-base font-medium">Track Smarter, Manage Better</CardDescription>
-          <CardDescription className="text-sm">
-            {isRecoveryMode
-              ? 'Set your new password'
-              : isForgotPassword
-                ? 'Reset your password'
-                : isSignUp ? 'Create your account to get started' : 'Sign in to your account'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          </h1>
+        </div>
+        <div className="relative z-10 max-w-md">
+          <h2 className="text-5xl font-black text-primary-foreground leading-[1.1] tracking-tighter mb-6">
+            Master your money seamlessly.
+          </h2>
+          <p className="text-lg text-primary-foreground/80 font-medium leading-relaxed">
+            Track daily expenses, split bills with friends instantly, and achieve financial clarity in one beautifully simple space.
+          </p>
+        </div>
+      </div>
+
+      {/* Right side: Clean Form Area */}
+      <div className="w-full md:w-1/2 min-h-screen flex items-center justify-center p-6 sm:p-12 relative bg-background">
+        <div className="w-full max-w-[400px] space-y-8 relative z-10">
+
+          {/* Mobile Header (Hidden on desktop) */}
+          <div className="md:hidden mb-12 flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+              <div className="w-4 h-4 bg-white rounded-sm" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              ExpenseMate
+            </h1>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">
+              {isRecoveryMode
+                ? 'Reset Password'
+                : isForgotPassword
+                  ? 'Forgot Password'
+                  : isSignUp ? 'Create an account' : 'Welcome back'}
+            </h2>
+            <p className="text-muted-foreground font-medium text-base">
+              {isRecoveryMode
+                ? 'Enter your new password below.'
+                : isForgotPassword
+                  ? 'We will send you a reset link.'
+                  : isSignUp ? 'Sign up to get started immediately.' : 'Enter your details to access your dashboard.'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             {isRecoveryMode ? (
               <>
-                <div className="space-y-2 relative">
-                  <Label htmlFor="password">New Password</Label>
+                <div className="space-y-1.5 relative">
+                  <Label htmlFor="password" className="text-sm font-semibold">New Password</Label>
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -179,18 +219,19 @@ export default function Auth() {
                     required
                     placeholder="Enter completely new password"
                     minLength={6}
+                    className="h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-9 text-gray-500 hover:text-black"
+                    className="absolute right-3 top-9 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
 
-                <div className="space-y-2 relative">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <div className="space-y-1.5 relative">
+                  <Label htmlFor="confirmPassword" className="text-sm font-semibold">Confirm New Password</Label>
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -199,46 +240,49 @@ export default function Auth() {
                     required
                     placeholder="Confirm your new password"
                     minLength={6}
+                    className="h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-9 text-gray-500 hover:text-black"
+                    className="absolute right-3 top-9 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
-                  {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                  {passwordError && <p className="text-sm text-destructive font-medium mt-1">{passwordError}</p>}
                 </div>
               </>
             ) : isForgotPassword ? (
-              <div className="space-y-2">
-                <Label htmlFor="forgotEmail">Email address</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="forgotEmail" className="text-sm font-semibold">Email address</Label>
                 <Input
                   id="forgotEmail"
                   type="email"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   required
-                  placeholder="Enter your email"
+                  placeholder="name@example.com"
+                  className="h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all"
                 />
               </div>
             ) : (
               <>
                 {isSignUp && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name</Label>
+                  <div className="space-y-5">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="fullName" className="text-sm font-semibold">Full Name</Label>
                       <Input
                         id="fullName"
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         required
-                        placeholder="Enter your full name"
+                        placeholder="e.g. Jane Doe"
+                        className="h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="username" className="text-sm font-semibold">Username</Label>
                       <div className="relative">
                         <Input
                           id="username"
@@ -247,90 +291,96 @@ export default function Auth() {
                           onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                           required
                           placeholder="Choose a unique username"
-                          className={
-                            usernameStatus === 'taken' ? 'border-destructive focus-visible:ring-destructive' :
+                          className={`h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all pr-10 ${usernameStatus === 'taken' ? 'border-destructive focus-visible:ring-destructive' :
                               usernameStatus === 'available' ? 'border-success focus-visible:ring-success' : ''
-                          }
+                            }`}
                         />
-                        <div className="absolute right-3 top-2.5 flex items-center">
-                          {usernameStatus === 'checking' && <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />}
+                        <div className="absolute right-3 top-3.5 flex items-center">
+                          {usernameStatus === 'checking' && <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />}
                           {usernameStatus === 'available' && <Check className="h-5 w-5 text-success" />}
                           {usernameStatus === 'taken' && <X className="h-5 w-5 text-destructive" />}
                         </div>
                       </div>
                       {usernameStatus === 'taken' && username.length >= 3 && (
-                        <p className="text-xs text-destructive">Username is already taken or invalid.</p>
+                        <p className="text-xs font-medium text-destructive mt-1">Username is already taken.</p>
                       )}
                       {username.length > 0 && username.length < 3 && (
-                        <p className="text-xs text-muted-foreground">Username must be at least 3 characters.</p>
+                        <p className="text-xs font-medium text-muted-foreground mt-1">Username must be at least 3 characters.</p>
                       )}
                     </div>
                   </div>
                 )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="Enter your email"
+                    placeholder="name@example.com"
+                    className="h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all"
                   />
                 </div>
 
-                <div className="space-y-2 relative">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="Enter your password"
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-9 text-gray-500 hover:text-black"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {isSignUp && (
-                  <div className="space-y-2 relative">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="space-y-1.5 relative">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
+                    {!isSignUp && !isForgotPassword && (
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPassword(true)}
+                        className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+                      >
+                        Forgot?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
                     <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
-                      placeholder="Confirm your password"
+                      placeholder="Enter your password"
                       minLength={6}
+                      className="h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all"
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-9 text-gray-500 hover:text-black"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
-                    {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
                   </div>
-                )}
+                </div>
 
-                {!isSignUp && !isForgotPassword && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsForgotPassword(true)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Forgot Password?
-                    </button>
+                {isSignUp && (
+                  <div className="space-y-1.5 relative">
+                    <Label htmlFor="confirmPassword" className="text-sm font-semibold">Confirm Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        placeholder="Confirm your password"
+                        minLength={6}
+                        className="h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {passwordError && <p className="text-sm font-medium text-destructive mt-1">{passwordError}</p>}
                   </div>
                 )}
               </>
@@ -338,39 +388,45 @@ export default function Auth() {
 
             <Button
               type="submit"
-              className="w-full h-11 text-base font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-md mt-6"
+              size="lg"
+              className="w-full h-14 rounded-xl text-lg font-bold shadow-xl shadow-primary/20 hover:shadow-primary/30 mt-8"
               disabled={loadingForm || (!isRecoveryMode && isSignUp && usernameStatus !== 'available')}
             >
-              {loadingForm ? 'Please wait...' : isRecoveryMode ? 'Update Password' : isForgotPassword ? 'Send Reset Link' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {loadingForm ? (
+                <span className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Processing...</span>
+              ) : isRecoveryMode ? 'Update Password' : isForgotPassword ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'}
             </Button>
           </form>
 
           {!isRecoveryMode && (
-            <div className="mt-4 text-center space-y-2">
+            <div className="pt-2 text-center">
               {isForgotPassword ? (
                 <button
                   type="button"
                   onClick={() => setIsForgotPassword(false)}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
+                  className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Back to Sign in
+                  Back to Sign In
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setPasswordError('');
-                  }}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors underline"
-                >
-                  {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-                </button>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUp(!isSignUp);
+                      setPasswordError('');
+                    }}
+                    className="text-primary hover:text-primary/80 font-bold transition-colors"
+                  >
+                    {isSignUp ? 'Sign in' : "Sign up"}
+                  </button>
+                </p>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
