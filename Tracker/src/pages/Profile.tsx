@@ -129,9 +129,9 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
-      <header className="border-b bg-card shadow-sm">
+      <header className="border-b bg-card/40 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40 sticky top-0 z-50 border-border/40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Button
             variant="ghost"
@@ -164,7 +164,7 @@ export default function Profile() {
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Profile Card */}
-        <Card className="shadow-sm border-border/60 bg-card/95">
+        <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
           <CardHeader className="text-center pb-6">
             <div className="flex justify-center mb-4">
               <Avatar className="h-24 w-24 border-4 border-card shadow-sm">
@@ -227,7 +227,7 @@ export default function Profile() {
             ) : (
               <div className="space-y-4">
                 {profile?.full_name && (
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card/40 border border-border/40 backdrop-blur-md shadow-sm transition-all hover:bg-card/60">
                     <User className="h-5 w-5 text-primary" />
                     <div>
                       <p className="text-sm text-muted-foreground font-medium">Full Name</p>
@@ -237,7 +237,7 @@ export default function Profile() {
                 )}
 
                 {profile?.username && (
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card/40 border border-border/40 backdrop-blur-md shadow-sm transition-all hover:bg-card/60">
                     <User className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground font-medium">Username</p>

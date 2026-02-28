@@ -225,9 +225,9 @@ export default function Friends() {
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
             {/* Header */}
-            <header className="border-b bg-card shadow-sm sticky top-0 z-10 px-4 py-4">
+            <header className="border-b bg-card/40 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40 sticky top-0 z-50 border-border/40 px-4 py-4">
                 <div className="container mx-auto flex items-center gap-4">
                     <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="shrink-0">
                         <ArrowLeft className="h-5 w-5" />
@@ -262,7 +262,7 @@ export default function Friends() {
 
                     <TabsContent value="friends" className="space-y-4">
                         {friends.length === 0 ? (
-                            <Card className="text-center py-10 shadow-sm border-border/60 bg-card/95">
+                            <Card className="text-center py-10 shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
                                 <CardContent>
                                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
                                     <p className="text-muted-foreground">You don&apos;t have any friends added yet.<br />Go to the "Add Friend" tab to connect with someone!</p>
@@ -271,7 +271,7 @@ export default function Friends() {
                         ) : (
                             <div className="grid gap-4">
                                 {friends.map(friend => (
-                                    <Card key={friend.id} className="shadow-sm border-border/60 bg-card/95">
+                                    <Card key={friend.id} className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
                                         <CardContent className="p-4 flex items-center justify-between">
                                             <div>
                                                 <p className="font-semibold text-lg">{friend.profiles.full_name}</p>
@@ -339,7 +339,7 @@ export default function Friends() {
                             ) : (
                                 <div className="grid gap-3">
                                     {incomingRequests.map(req => (
-                                        <Card key={req.id} className="shadow-sm border-border/60 bg-card/95">
+                                        <Card key={req.id} className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
                                             <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                                 <div>
                                                     <p className="font-semibold text-lg">{req.profiles.full_name}</p>
@@ -371,7 +371,7 @@ export default function Friends() {
                             ) : (
                                 <div className="grid gap-3">
                                     {outgoingRequests.map(req => (
-                                        <Card key={req.id} className="shadow-sm border-border/60 bg-card/95">
+                                        <Card key={req.id} className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
                                             <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-3">
                                                 <div>
                                                     <p className="font-medium text-lg">{req.profiles.full_name}</p>

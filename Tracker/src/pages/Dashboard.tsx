@@ -14,6 +14,7 @@ import { AddTiffinForm } from '@/components/AddTiffinForm';
 import { EmptyState } from '@/components/EmptyState';
 import { ExpenseFilters, FilterOptions } from '@/components/ExpenseFilters';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BottomNav } from '@/components/layout/BottomNav';
 
 interface Profile {
   full_name: string;
@@ -280,8 +281,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/20">
-      <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 sticky top-0 z-50 shadow-sm">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      <header className="border-b bg-card/40 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40 sticky top-0 z-50 border-border/40">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="bg-primary/10 p-1.5 rounded-lg">
@@ -308,44 +309,44 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 pb-32 md:pb-8 space-y-8 max-w-7xl">
 
         <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-          {/* Scrollable tabs list for mobile */}
-          <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 scrollbar-hide">
-            <TabsList className="flex w-max sm:w-full sm:grid sm:grid-cols-4 mb-6 sm:mb-8 h-12 bg-muted/50 p-1 rounded-lg">
-              <TabsTrigger value="overview" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Overview</TabsTrigger>
-              <TabsTrigger value="personal" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Personal</TabsTrigger>
-              <TabsTrigger value="splitwise" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Splitwise</TabsTrigger>
-              <TabsTrigger value="tiffin" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Tiffin / Delivery</TabsTrigger>
+          {/* Desktop Only Tabs */}
+          <div className="w-full mb-6 sm:mb-8 hidden md:block">
+            <TabsList className="grid w-full grid-cols-4 h-12 bg-muted/50 p-1 rounded-lg">
+              <TabsTrigger value="overview" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Overview</TabsTrigger>
+              <TabsTrigger value="personal" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Personal</TabsTrigger>
+              <TabsTrigger value="splitwise" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Splitwise</TabsTrigger>
+              <TabsTrigger value="tiffin" className="text-sm md:text-base rounded-md data-[state=active]:shadow-sm">Tiffin / Delivery</TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="overview" className="space-y-6 mt-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <Card className="shadow-sm border-border/60 hover:border-warning/50 transition-colors bg-card/95">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-warning/50 transition-all duration-300">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe / Pending
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{totalPending.toFixed(2)}</div>
+                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{totalPending.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-sm border-border/60 hover:border-success/50 transition-colors bg-card/95">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-success/50 transition-all duration-300">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{totalLent.toFixed(2)}</div>
+                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{totalLent.toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="shadow-sm border-border/60 bg-card/95">
+            <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
               <CardHeader>
                 <CardTitle>Spending by Category</CardTitle>
               </CardHeader>
@@ -367,15 +368,15 @@ export default function Dashboard() {
 
           <TabsContent value="personal" className="space-y-6 mt-0">
             <div className="grid grid-cols-1">
-              <Card className="shadow-sm border-border/60 bg-gradient-to-br from-card to-secondary/30">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl transition-all duration-300">
                 <CardHeader className="pb-2 text-center">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                     Total Lifetime Spent
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-center">
-                  <div className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">₹{totalPersonalSpent.toFixed(2)}</div>
-                  <p className="text-sm text-muted-foreground mt-3">Your actual share across all expenses</p>
+                  <div className="text-5xl font-extrabold tracking-tighter text-foreground bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent pb-1">₹{totalPersonalSpent.toFixed(2)}</div>
+                  <p className="text-sm text-muted-foreground mt-2 font-medium">Your actual share across all expenses</p>
                 </CardContent>
               </Card>
             </div>
@@ -396,24 +397,24 @@ export default function Dashboard() {
 
           <TabsContent value="splitwise" className="space-y-6 mt-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-2">
-              <Card className="shadow-sm border-border/60 hover:border-warning/50 transition-colors bg-card/95">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-warning/50 transition-all duration-300">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{splitOwe.toFixed(2)}</div>
+                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{splitOwe.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-sm border-border/60 hover:border-success/50 transition-colors bg-card/95">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-success/50 transition-all duration-300">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{splitOwed.toFixed(2)}</div>
+                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{splitOwed.toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>
@@ -432,34 +433,34 @@ export default function Dashboard() {
 
           <TabsContent value="tiffin" className="space-y-6 mt-0">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-2">
-              <Card className="shadow-sm border-border/60 bg-card/95">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <Utensils className="h-4 w-4 text-muted-foreground" /> Tiffin Pending
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{tiffinPending.toFixed(2)}</div>
+                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{tiffinPending.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-sm border-border/60 bg-card/95">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <Truck className="h-4 w-4 text-muted-foreground" /> Delivery Pending
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{deliveryPending.toFixed(2)}</div>
+                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{deliveryPending.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-sm border-border/60 bg-card/95">
+              <Card className="shadow-sm border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 transition-all duration-300">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                     <Check className="h-4 w-4 text-success" /> Total Cleared
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{tiffinCleared.toFixed(2)}</div>
+                  <div className="text-4xl font-extrabold tracking-tighter text-foreground">₹{tiffinCleared.toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>
@@ -485,13 +486,14 @@ export default function Dashboard() {
               ))}
             </Tabs>
           </TabsContent>
-        </Tabs >
-      </div >
+        </Tabs>
+      </div>
 
-      {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />
-      }
+      {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />}
       {showAddTiffinForm && <AddTiffinForm onClose={() => setShowAddTiffinForm(false)} onSuccess={() => { setShowAddTiffinForm(false); fetchExpenses(); }} />}
-    </div >
+
+      <BottomNav currentTab={mainTab} onTabChange={setMainTab} />
+    </div>
   );
 }
 
@@ -517,7 +519,7 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
   const isCreator = expense.user_id === currentUserId;
 
   return (
-    <Card className="shadow-sm border border-border/60 hover:border-border transition-colors bg-card/95 relative overflow-hidden group">
+    <Card className="shadow-sm border border-border/40 hover:border-primary/50 transition-all duration-300 bg-card/40 backdrop-blur-xl relative overflow-hidden group">
       <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/40 group-hover:bg-primary transition-colors"></div>
       <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -531,7 +533,7 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
           {expense.note && <p className="text-sm text-foreground/70 mt-1 line-clamp-2">{expense.note}</p>}
         </div>
         <div className="flex items-center gap-4 self-end sm:self-auto shrink-0">
-          <div className="text-xl sm:text-2xl font-bold tracking-tight">₹{myShare.toFixed(2)}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold tracking-tighter">₹{myShare.toFixed(2)}</div>
           {isCreator && onDelete && (
             <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors" onClick={() => onDelete(expense.id)}>
               <Trash2 className="h-4 w-4" />
@@ -634,7 +636,7 @@ function ExpenseCard({
   }
 
   return (
-    <Card className="shadow-sm border border-border/60 hover:border-border transition-colors bg-card/95 relative overflow-hidden group">
+    <Card className="shadow-sm border border-border/40 hover:border-primary/50 transition-all duration-300 bg-card/40 backdrop-blur-xl relative overflow-hidden group">
       <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isPayer && isSplitExpense ? 'bg-primary/40 group-hover:bg-primary' : !isPayer ? 'bg-warning/40 group-hover:bg-warning' : 'bg-transparent'}`}></div>
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-start justify-between mb-4">
@@ -659,7 +661,7 @@ function ExpenseCard({
         </div>
 
         <div className="space-y-1.5 mb-4">
-          <div className="text-2xl sm:text-3xl font-bold tracking-tight">₹{displayAmount}</div>
+          <div className="text-3xl sm:text-4xl font-extrabold tracking-tighter">₹{displayAmount}</div>
 
           {!isPayer ? (
             <p className="text-sm font-medium text-warning flex items-center gap-1.5">
@@ -748,7 +750,7 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
   const isCreator = expense.user_id === currentUserId;
 
   return (
-    <Card className="shadow-sm border border-border/60 hover:border-border transition-colors bg-card/95 relative overflow-hidden group">
+    <Card className="shadow-sm border border-border/40 hover:border-primary/50 transition-all duration-300 bg-card/40 backdrop-blur-xl relative overflow-hidden group">
       <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isPayer ? 'bg-success/40 group-hover:bg-success' : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/50'}`}></div>
       <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -764,7 +766,7 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
           </p>
         </div>
         <div className="flex items-center gap-4 self-end sm:self-auto shrink-0">
-          <div className={`text-xl sm:text-2xl font-bold tracking-tight ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>
+          <div className={`text-2xl sm:text-3xl font-extrabold tracking-tighter ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>
             {isPayer ? '+' : '-'}₹{myShare.toFixed(2)}
           </div>
           {isCreator && onDelete && (
