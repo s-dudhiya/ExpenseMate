@@ -164,6 +164,7 @@ export default function Admin() {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${supabaseAnonKey}`,
+                    'apikey': supabaseAnonKey,
                 },
                 body: JSON.stringify({ subject, htmlBody: message, attachments })
             });
