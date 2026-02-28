@@ -77,10 +77,10 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/admin" element={<Admin />} />
+        {/* <Route path="/admin" element={<Admin />} />
         {isMaintenanceMode ? (
           <Route path="*" element={<Maintenance />} />
-        ) : (
+        ) : ( */}
           <>
             <Route path="/" element={<RootRedirect />} />
             <Route path="/auth" element={<Auth />} />
@@ -89,7 +89,7 @@ const AppRoutes = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </>
-         )}
+         {/* )} */}
       </Routes>
     </BrowserRouter>
   );

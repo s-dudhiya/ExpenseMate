@@ -41,6 +41,7 @@ interface Expense {
   updated_at: string;
   expense_splits?: ExpenseSplit[];
   profiles?: Profile;
+  payer_profile?: Profile;
 }
 
 const categoryConfig = {
@@ -78,6 +79,7 @@ export default function Dashboard() {
         .select(`
           *,
           profiles!expenses_user_id_fkey(full_name, username),
+          payer_profile:profiles!expenses_paid_by_fkey(full_name, username),
           expense_splits(id, user_id, amount_owed, has_paid, profiles!expense_splits_user_id_fkey(full_name, username))
         `)
         .order('created_at', { ascending: false });
@@ -612,14 +614,12 @@ function ExpenseCard({
 
   // Note text if someone else paid
   let paidByNote = '';
-  if (!isPayer && expense.profiles) {
-    if (expense.paid_by !== expense.user_id) {
-      paidByNote = `Owed to a friend`;
-      // If we could perfectly join paid_by profile name, we'd use it here.
-      // For now, if paid_by is different than the creator, we just say friend.
-    } else {
-      paidByNote = `Owed to ${expense.profiles.full_name}`;
-    }
+  if (!isPayer) {
+    paidByNote = `Owed to ${expense.payer_profile?.full_name || 'a friend'}`;
+  } else if (isPayer && isSplitExpense) {
+    // If you are the payer, list who owes you in the breakdown, but we can also add a top level note
+    const owedByNames = expense.expense_splits?.filter(s => !s.has_paid).map(s => s.profiles?.full_name).join(', ');
+    if (owedByNames) paidByNote = `Waiting on ${owedByNames}`;
   }
 
   return (
@@ -647,11 +647,15 @@ function ExpenseCard({
         <div className="space-y-1 mb-3">
           <div className="text-2xl font-bold">₹{displayAmount}</div>
 
-          {!isPayer && (
+          {!isPayer ? (
             <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
               <ArrowDownRight className="h-3 w-3" /> {paidByNote}
             </p>
-          )}
+          ) : isSplitExpense && isPending ? (
+            <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+              <ArrowUpRight className="h-3 w-3" /> {paidByNote}
+            </p>
+          ) : null}
 
           {expense.note && <p className="text-sm text-foreground/80 mt-1">{expense.note}</p>}
           <p className="text-xs text-muted-foreground">{new Date(expense.created_at).toLocaleDateString()}</p>
@@ -677,16 +681,29 @@ function ExpenseCard({
 
         {/* ACTION BUTTONS */}
         <div className="mt-4">
+          {/* Solo expense cleared by creator */}
           {isPayer && !isSplitExpense && isPending && onMarkCleared && (
             <Button onClick={() => onMarkCleared(expense.id)} size="sm" className="w-full bg-success hover:bg-success/90">
               <Check className="h-4 w-4 mr-2" /> Mark as Cleared
             </Button>
           )}
 
+          {/* Debtor paying their specific split */}
           {!isPayer && mySplit && isPending && onMarkSplitPaid && (
             <Button onClick={() => onMarkSplitPaid(mySplit.id, expense.id)} size="sm" className="w-full bg-primary hover:bg-primary/90">
               <Check className="h-4 w-4 mr-2" /> Pay ₹{mySplit.amount_owed}
             </Button>
+          )}
+
+          {/* Payer settling up a pending split on behalf of someone else (e.g. they handed them cash) */}
+          {isPayer && isSplitExpense && isPending && onMarkSplitPaid && (
+            <div className="flex flex-col gap-2">
+              {expense.expense_splits?.filter(s => !s.has_paid).map(split => (
+                <Button key={split.id} onClick={() => onMarkSplitPaid(split.id, expense.id)} size="sm" variant="outline" className="w-full border-success text-success hover:bg-success/10">
+                  <Check className="h-4 w-4 mr-2" /> Mark {split.profiles?.full_name}'s ₹{split.amount_owed} as Settled
+                </Button>
+              ))}
+            </div>
           )}
         </div>
       </CardContent>
@@ -726,7 +743,7 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
           </div>
           <p className="text-xs text-muted-foreground mt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {isPayer ? `You were paid back` : `You paid back someone`}
+            {isPayer ? `You were paid back` : `You paid back ${expense.payer_profile?.full_name || 'someone'}`}
           </p>
         </div>
         <div className="flex items-center gap-4 self-end sm:self-auto">
