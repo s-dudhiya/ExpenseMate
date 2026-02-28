@@ -150,22 +150,22 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-elegant">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+    <div className="min-h-screen bg-secondary/30 flex items-center justify-center p-4 selection:bg-primary/20">
+      <Card className="w-full max-w-md shadow-elegant border-border/50 rounded-xl overflow-hidden bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/75">
+        <CardHeader className="text-center space-y-3 pb-6 border-b border-border/50 bg-muted/20">
+          <CardTitle className="text-3xl font-bold tracking-tight text-primary">
             ExpenseMate
           </CardTitle>
-          <CardDescription className="text-lg font-medium">Track Smarter</CardDescription>
-          <CardDescription>
+          <CardDescription className="text-base font-medium">Track Smarter, Manage Better</CardDescription>
+          <CardDescription className="text-sm">
             {isRecoveryMode
               ? 'Set your new password'
               : isForgotPassword
                 ? 'Reset your password'
-                : isSignUp ? 'Create your account' : 'Sign in to your account'}
+                : isSignUp ? 'Create your account to get started' : 'Sign in to your account'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {isRecoveryMode ? (
               <>
@@ -338,7 +338,7 @@ export default function Auth() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+              className="w-full h-11 text-base font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-md mt-6"
               disabled={loadingForm || (!isRecoveryMode && isSignUp && usernameStatus !== 'available')}
             >
               {loadingForm ? 'Please wait...' : isRecoveryMode ? 'Update Password' : isForgotPassword ? 'Send Reset Link' : isSignUp ? 'Sign Up' : 'Sign In'}

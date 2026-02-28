@@ -64,6 +64,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       fetchExpenses();
     }
   }, [user]);
@@ -158,11 +159,12 @@ export default function Dashboard() {
             const d = new Date(e.created_at); return d >= filterDate && d <= endOfLastMonth;
           });
           break;
-        case 'this-week':
+        case 'this-week': {
           const startOfWeek = new Date(now);
           startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0, 0, 0, 0);
           filterDate.setTime(startOfWeek.getTime());
           break;
+        }
       }
       if (filters.timeRange !== 'last-month') {
         filtered = filtered.filter(e => new Date(e.created_at) >= filterDate);
@@ -278,67 +280,72 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card shadow-sm">
+    <div className="min-h-screen bg-secondary/20">
+      <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Wallet className="h-8 w-8 text-primary" />
-            <h1 className="hidden sm:block text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Wallet className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="hidden sm:block text-xl font-bold tracking-tight text-foreground">
               ExpenseMate
             </h1>
           </div>
-          <div className="flex items-center gap-2 md:gap-4">
-            <Button onClick={() => setShowAddForm(true)} size="sm" className="bg-gradient-primary">
+          <div className="flex items-center gap-2 md:gap-3">
+            <Button onClick={() => setShowAddForm(true)} size="sm" className="bg-primary hover:bg-primary/90 shadow-sm transition-all rounded-md">
               <Plus className="h-4 w-4 mr-2" /> <span className="hidden sm:inline">Expense</span>
             </Button>
-            <Button onClick={() => setShowAddTiffinForm(true)} size="sm" variant="outline" className="border-primary/20 bg-secondary/20 hover:bg-secondary/40">
+            <Button onClick={() => setShowAddTiffinForm(true)} size="sm" variant="outline" className="border-border bg-card hover:bg-accent/10 hover:text-accent shadow-sm transition-all rounded-md">
               <Plus className="h-4 w-4 mr-2" /> <span className="hidden sm:inline">Tiffin</span>
             </Button>
-            <Button onClick={() => navigate('/friends')} variant="outline" size="sm" title="Friends Hub">
+            <Button onClick={() => navigate('/friends')} variant="outline" size="sm" title="Friends Hub" className="border-border bg-card hover:bg-muted shadow-sm rounded-md">
               <Users className="h-4 w-4" />
             </Button>
-            <Button onClick={() => navigate('/profile')} variant="outline" size="sm" title="Profile Settings">
+            <Button onClick={() => navigate('/profile')} variant="outline" size="sm" title="Profile Settings" className="border-border bg-card hover:bg-muted shadow-sm rounded-md">
               <User className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
 
         <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8 h-12">
-            <TabsTrigger value="overview" className="text-sm md:text-base">Overview</TabsTrigger>
-            <TabsTrigger value="personal" className="text-sm md:text-base">Personal</TabsTrigger>
-            <TabsTrigger value="splitwise" className="text-sm md:text-base">Splitwise</TabsTrigger>
-            <TabsTrigger value="tiffin" className="text-sm md:text-base">Tiffin</TabsTrigger>
-          </TabsList>
+          {/* Scrollable tabs list for mobile */}
+          <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 scrollbar-hide">
+            <TabsList className="flex w-max sm:w-full sm:grid sm:grid-cols-4 mb-6 sm:mb-8 h-12 bg-muted/50 p-1 rounded-lg">
+              <TabsTrigger value="overview" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Overview</TabsTrigger>
+              <TabsTrigger value="personal" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Personal</TabsTrigger>
+              <TabsTrigger value="splitwise" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Splitwise</TabsTrigger>
+              <TabsTrigger value="tiffin" className="text-sm md:text-base rounded-md px-6 sm:px-0 data-[state=active]:shadow-sm">Tiffin / Delivery</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="shadow-elegant border-warning/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <Card className="shadow-sm border-border/60 hover:border-warning/50 transition-colors bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe / Pending
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-warning">₹{totalPending.toFixed(2)}</div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{totalPending.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-elegant border-success/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Card className="shadow-sm border-border/60 hover:border-success/50 transition-colors bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-success">₹{totalLent.toFixed(2)}</div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{totalLent.toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="shadow-elegant">
+            <Card className="shadow-sm border-border/60 bg-card/95">
               <CardHeader>
                 <CardTitle>Spending by Category</CardTitle>
               </CardHeader>
@@ -360,15 +367,15 @@ export default function Dashboard() {
 
           <TabsContent value="personal" className="space-y-6 mt-0">
             <div className="grid grid-cols-1">
-              <Card className="shadow-elegant border-primary/20">
-                <CardHeader className="pb-3 text-center">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+              <Card className="shadow-sm border-border/60 bg-gradient-to-br from-card to-secondary/30">
+                <CardHeader className="pb-2 text-center">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Total Lifetime Spent
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-center">
-                  <div className="text-4xl font-bold text-primary">₹{totalPersonalSpent.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground mt-2">Your actual share across all expenses</p>
+                  <div className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">₹{totalPersonalSpent.toFixed(2)}</div>
+                  <p className="text-sm text-muted-foreground mt-3">Your actual share across all expenses</p>
                 </CardContent>
               </Card>
             </div>
@@ -388,25 +395,25 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="splitwise" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
-              <Card className="shadow-elegant border-warning/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-2">
+              <Card className="shadow-sm border-border/60 hover:border-warning/50 transition-colors bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <ArrowDownRight className="h-4 w-4 text-warning" /> You Owe
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-warning">₹{splitOwe.toFixed(2)}</div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{splitOwe.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-elegant border-success/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Card className="shadow-sm border-border/60 hover:border-success/50 transition-colors bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <ArrowUpRight className="h-4 w-4 text-success" /> You are Owed
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-success">₹{splitOwed.toFixed(2)}</div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{splitOwed.toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>
@@ -424,43 +431,43 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="tiffin" className="space-y-6 mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
-              <Card className="shadow-elegant border-warning/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Utensils className="h-4 w-4 text-warning" /> Tiffin Pending
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-2">
+              <Card className="shadow-sm border-border/60 bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Utensils className="h-4 w-4 text-muted-foreground" /> Tiffin Pending
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-warning">₹{tiffinPending.toFixed(2)}</div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{tiffinPending.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-elegant border-warning/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-warning" /> Delivery Pending
+              <Card className="shadow-sm border-border/60 bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-muted-foreground" /> Delivery Pending
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-warning">₹{deliveryPending.toFixed(2)}</div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{deliveryPending.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-elegant border-success/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Card className="shadow-sm border-border/60 bg-card/95">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <Check className="h-4 w-4 text-success" /> Total Cleared
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-success">₹{tiffinCleared.toFixed(2)}</div>
+                  <div className="text-3xl font-bold tracking-tight text-foreground">₹{tiffinCleared.toFixed(2)}</div>
                 </CardContent>
               </Card>
             </div>
             <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
             <Tabs value={tiffinTab} onValueChange={setTiffinTab}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="tiffin" className="flex items-center gap-2"><Utensils className="h-4 w-4" /> Tiffin</TabsTrigger>
-                <TabsTrigger value="delivery" className="flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-lg h-12">
+                <TabsTrigger value="tiffin" className="rounded-md data-[state=active]:shadow-sm flex items-center gap-2"><Utensils className="h-4 w-4 hidden sm:block" /> Tiffin</TabsTrigger>
+                <TabsTrigger value="delivery" className="rounded-md data-[state=active]:shadow-sm flex items-center gap-2"><Truck className="h-4 w-4 hidden sm:block" /> Delivery</TabsTrigger>
               </TabsList>
 
               {['tiffin', 'delivery'].map(category => (
@@ -478,12 +485,13 @@ export default function Dashboard() {
               ))}
             </Tabs>
           </TabsContent>
-        </Tabs>
-      </div>
+        </Tabs >
+      </div >
 
-      {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />}
+      {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />
+      }
       {showAddTiffinForm && <AddTiffinForm onClose={() => setShowAddTiffinForm(false)} onSuccess={() => { setShowAddTiffinForm(false); fetchExpenses(); }} />}
-    </div>
+    </div >
   );
 }
 
@@ -509,20 +517,23 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
   const isCreator = expense.user_id === currentUserId;
 
   return (
-    <Card className="shadow-sm border-l-4 border-l-primary hover:shadow-md transition-shadow">
-      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Receipt className="h-4 w-4 text-primary" />
-            <h4 className="font-semibold text-base">{expense.category}</h4>
+    <Card className="shadow-sm border border-border/60 hover:border-border transition-colors bg-card/95 relative overflow-hidden group">
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/40 group-hover:bg-primary transition-colors"></div>
+      <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-primary/10 p-1.5 rounded-md shrink-0">
+              <Receipt className="h-4 w-4 text-primary" />
+            </div>
+            <h4 className="font-semibold text-base text-foreground truncate">{expense.category}</h4>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
-          {expense.note && <p className="text-sm text-foreground/80 mt-1">{expense.note}</p>}
+          <p className="text-xs text-muted-foreground mt-2 font-medium">{new Date(expense.created_at).toLocaleDateString()}</p>
+          {expense.note && <p className="text-sm text-foreground/70 mt-1 line-clamp-2">{expense.note}</p>}
         </div>
-        <div className="flex items-center gap-4 self-end sm:self-auto">
-          <div className="text-xl font-bold">₹{myShare.toFixed(2)}</div>
+        <div className="flex items-center gap-4 self-end sm:self-auto shrink-0">
+          <div className="text-xl sm:text-2xl font-bold tracking-tight">₹{myShare.toFixed(2)}</div>
           {isCreator && onDelete && (
-            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8" onClick={() => onDelete(expense.id)}>
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors" onClick={() => onDelete(expense.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
@@ -623,42 +634,45 @@ function ExpenseCard({
   }
 
   return (
-    <Card className={`shadow-md hover:shadow-lg transition-shadow border-t-4 ${isPayer && isSplitExpense ? 'border-t-primary' : !isPayer ? 'border-t-warning' : 'border-t-transparent'}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Icon className="h-5 w-5 text-primary" />
-            <span className="font-medium max-w-[120px] sm:max-w-none truncate" title={expense.category}>
+    <Card className="shadow-sm border border-border/60 hover:border-border transition-colors bg-card/95 relative overflow-hidden group">
+      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isPayer && isSplitExpense ? 'bg-primary/40 group-hover:bg-primary' : !isPayer ? 'bg-warning/40 group-hover:bg-warning' : 'bg-transparent'}`}></div>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2.5 min-w-0 pr-3">
+            <div className="bg-primary/10 p-1.5 rounded-md shrink-0">
+              <Icon className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-base truncate" title={expense.category}>
               {config?.label || expense.category}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={isPending ? 'default' : 'secondary'} className={isPending ? 'bg-warning' : 'bg-success'}>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant="outline" className={`font-medium ${isPending ? 'border-warning/50 text-warning bg-warning/5' : 'border-success/50 text-success bg-success/5'}`}>
               {isPending ? 'Pending' : 'Cleared'}
             </Badge>
             {isCreator && onDelete && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => onDelete(expense.id)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10 -mr-2" onClick={() => onDelete(expense.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>
         </div>
 
-        <div className="space-y-1 mb-3">
-          <div className="text-2xl font-bold">₹{displayAmount}</div>
+        <div className="space-y-1.5 mb-4">
+          <div className="text-2xl sm:text-3xl font-bold tracking-tight">₹{displayAmount}</div>
 
           {!isPayer ? (
-            <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-              <ArrowDownRight className="h-3 w-3" /> {paidByNote}
+            <p className="text-sm font-medium text-warning flex items-center gap-1.5">
+              <ArrowDownRight className="h-3.5 w-3.5" /> {paidByNote}
             </p>
           ) : isSplitExpense && isPending ? (
-            <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-              <ArrowUpRight className="h-3 w-3" /> {paidByNote}
+            <p className="text-sm font-medium text-primary flex items-center gap-1.5">
+              <ArrowUpRight className="h-3.5 w-3.5" /> {paidByNote}
             </p>
           ) : null}
 
-          {expense.note && <p className="text-sm text-foreground/80 mt-1">{expense.note}</p>}
-          <p className="text-xs text-muted-foreground">{new Date(expense.created_at).toLocaleDateString()}</p>
+          {expense.note && <p className="text-sm text-foreground/70 mt-2 line-clamp-2">{expense.note}</p>}
+          <p className="text-xs font-medium text-muted-foreground pt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
         </div>
 
         {/* SPLIT BREAKDOWN FOR PAYER */}
@@ -734,26 +748,27 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
   const isCreator = expense.user_id === currentUserId;
 
   return (
-    <Card className={`shadow-sm border-l-4 ${isPayer ? 'border-l-success' : 'border-l-muted'} hover:shadow-md transition-shadow opacity-90`}>
-      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={isPayer ? 'text-success border-success/30' : 'text-muted-foreground'}>Settled</Badge>
-            <h4 className="font-semibold text-base">{expense.category}</h4>
+    <Card className="shadow-sm border border-border/60 hover:border-border transition-colors bg-card/95 relative overflow-hidden group">
+      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isPayer ? 'bg-success/40 group-hover:bg-success' : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/50'}`}></div>
+      <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="outline" className={`font-medium ${isPayer ? 'text-success border-success/30 bg-success/5' : 'text-muted-foreground border-border bg-muted'}`}>Settled</Badge>
+            <h4 className="font-semibold text-base truncate">{expense.category}</h4>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs font-medium text-muted-foreground">{new Date(expense.created_at).toLocaleDateString()}</p>
+          <p className="text-sm text-foreground/80 mt-1.5">
             {isPayer
-              ? `You were paid by ${expense.expense_splits?.map(s => s.profiles?.full_name).join(', ') || 'someone'}`
-              : `You paid back ${expense.payer_profile?.full_name || 'someone'}`}
+              ? <span className="text-success"><span className="text-muted-foreground block text-xs mb-0.5">Paid by:</span> {expense.expense_splits?.map(s => s.profiles?.full_name).join(', ') || 'someone'}</span>
+              : <span className="text-muted-foreground"><span className="block text-xs mb-0.5">Paid to:</span> {expense.payer_profile?.full_name || 'someone'}</span>}
           </p>
         </div>
-        <div className="flex items-center gap-4 self-end sm:self-auto">
-          <div className={`text-xl font-bold ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>
+        <div className="flex items-center gap-4 self-end sm:self-auto shrink-0">
+          <div className={`text-xl sm:text-2xl font-bold tracking-tight ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>
             {isPayer ? '+' : '-'}₹{myShare.toFixed(2)}
           </div>
           {isCreator && onDelete && (
-            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8" onClick={() => onDelete(expense.id)}>
+            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors" onClick={() => onDelete(expense.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           )}

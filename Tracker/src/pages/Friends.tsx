@@ -260,25 +260,24 @@ export default function Friends() {
                         </TabsTrigger>
                     </TabsList>
 
-                    {/* TAB: MY FRIENDS */}
                     <TabsContent value="friends" className="space-y-4">
                         {friends.length === 0 ? (
-                            <Card className="text-center py-10">
+                            <Card className="text-center py-10 shadow-sm border-border/60 bg-card/95">
                                 <CardContent>
                                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                                    <p className="text-muted-foreground">You don't have any friends added yet.<br />Go to the "Add Friend" tab to connect with someone!</p>
+                                    <p className="text-muted-foreground">You don&apos;t have any friends added yet.<br />Go to the "Add Friend" tab to connect with someone!</p>
                                 </CardContent>
                             </Card>
                         ) : (
                             <div className="grid gap-4">
                                 {friends.map(friend => (
-                                    <Card key={friend.id} className="shadow-sm">
+                                    <Card key={friend.id} className="shadow-sm border-border/60 bg-card/95">
                                         <CardContent className="p-4 flex items-center justify-between">
                                             <div>
                                                 <p className="font-semibold text-lg">{friend.profiles.full_name}</p>
-                                                <p className="text-sm text-muted-foreground">@{friend.profiles.username}</p>
+                                                <p className="text-sm text-muted-foreground font-medium">@{friend.profiles.username}</p>
                                             </div>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => deleteConnection(friend.id)}>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0" onClick={() => deleteConnection(friend.id)}>
                                                 <UserMinus className="h-5 w-5" />
                                             </Button>
                                         </CardContent>
@@ -288,9 +287,8 @@ export default function Friends() {
                         )}
                     </TabsContent>
 
-                    {/* TAB: ADD FRIEND */}
                     <TabsContent value="add" className="space-y-6">
-                        <Card className="shadow-elegant">
+                        <Card className="shadow-sm border-border/60 bg-card/95">
                             <CardHeader>
                                 <CardTitle>Find Friends</CardTitle>
                                 <CardDescription>Search for someone using their exact `@username`.</CardDescription>
@@ -301,12 +299,12 @@ export default function Friends() {
                                         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                         <Input
                                             placeholder="e.g. john_doe"
-                                            className="pl-9"
+                                            className="pl-9 bg-card"
                                             value={searchUsername}
                                             onChange={(e) => setSearchUsername(e.target.value)}
                                         />
                                     </div>
-                                    <Button type="submit" disabled={isSearching || !searchUsername.trim()}>
+                                    <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-medium rounded-md" disabled={isSearching || !searchUsername.trim()}>
                                         {isSearching ? 'Searching...' : 'Search'}
                                     </Button>
                                 </form>
@@ -314,13 +312,13 @@ export default function Friends() {
                         </Card>
 
                         {searchResult && (
-                            <Card className="shadow-sm border-primary/20">
+                            <Card className="shadow-sm border-primary/40 bg-card/95">
                                 <CardContent className="p-4 flex items-center justify-between">
                                     <div>
                                         <p className="font-bold text-lg">{searchResult.full_name}</p>
-                                        <p className="text-sm text-muted-foreground">@{searchResult.username}</p>
+                                        <p className="text-sm text-muted-foreground font-medium">@{searchResult.username}</p>
                                     </div>
-                                    <Button onClick={() => sendRequest(searchResult.user_id)} className="bg-gradient-primary">
+                                    <Button onClick={() => sendRequest(searchResult.user_id)} className="bg-primary hover:bg-primary/90 transition-colors shrink-0">
                                         Send Request
                                     </Button>
                                 </CardContent>
@@ -341,17 +339,17 @@ export default function Friends() {
                             ) : (
                                 <div className="grid gap-3">
                                     {incomingRequests.map(req => (
-                                        <Card key={req.id}>
+                                        <Card key={req.id} className="shadow-sm border-border/60 bg-card/95">
                                             <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                                 <div>
-                                                    <p className="font-semibold">{req.profiles.full_name}</p>
-                                                    <p className="text-sm text-muted-foreground">@{req.profiles.username}</p>
+                                                    <p className="font-semibold text-lg">{req.profiles.full_name}</p>
+                                                    <p className="text-sm text-muted-foreground font-medium">@{req.profiles.username}</p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <Button size="sm" className="bg-success hover:bg-success/90" onClick={() => updateConnectionStatus(req.id, 'accepted')}>
+                                                    <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90 transition-colors" onClick={() => updateConnectionStatus(req.id, 'accepted')}>
                                                         <Check className="h-4 w-4 mr-1" /> Accept
                                                     </Button>
-                                                    <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" onClick={() => updateConnectionStatus(req.id, 'rejected')}>
+                                                    <Button size="sm" variant="outline" className="border-border text-destructive hover:bg-destructive/10 transition-colors" onClick={() => updateConnectionStatus(req.id, 'rejected')}>
                                                         <X className="h-4 w-4 mr-1" /> Reject
                                                     </Button>
                                                 </div>
@@ -373,13 +371,13 @@ export default function Friends() {
                             ) : (
                                 <div className="grid gap-3">
                                     {outgoingRequests.map(req => (
-                                        <Card key={req.id}>
+                                        <Card key={req.id} className="shadow-sm border-border/60 bg-card/95">
                                             <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-3">
                                                 <div>
-                                                    <p className="font-medium">{req.profiles.full_name}</p>
-                                                    <p className="text-sm text-muted-foreground">@{req.profiles.username}</p>
+                                                    <p className="font-medium text-lg">{req.profiles.full_name}</p>
+                                                    <p className="text-sm text-muted-foreground font-medium">@{req.profiles.username}</p>
                                                 </div>
-                                                <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => deleteConnection(req.id)}>
+                                                <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 transition-colors" onClick={() => deleteConnection(req.id)}>
                                                     Cancel
                                                 </Button>
                                             </CardContent>

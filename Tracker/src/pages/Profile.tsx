@@ -164,17 +164,17 @@ export default function Profile() {
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Profile Card */}
-        <Card className="shadow-elegant">
+        <Card className="shadow-sm border-border/60 bg-card/95">
           <CardHeader className="text-center pb-6">
             <div className="flex justify-center mb-4">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="text-2xl bg-gradient-primary text-primary-foreground">
-                  <User className="h-12 w-12" />
+              <Avatar className="h-24 w-24 border-4 border-card shadow-sm">
+                <AvatarFallback className="text-2xl bg-secondary text-foreground">
+                  <User className="h-12 w-12 text-primary/70" />
                 </AvatarFallback>
               </Avatar>
             </div>
-            <CardTitle className="text-2xl">{getDisplayName()}</CardTitle>
-            <CardDescription>Profile Information</CardDescription>
+            <CardTitle className="text-2xl font-bold tracking-tight">{getDisplayName()}</CardTitle>
+            <CardDescription className="text-base">Profile Information</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
@@ -217,7 +217,7 @@ export default function Profile() {
                   <Button
                     onClick={handleSaveProfile}
                     disabled={isSaving || (editUsername !== profile?.username && usernameStatus !== 'available')}
-                    className="flex-1 bg-gradient-primary"
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-medium rounded-md"
                   >
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Changes
@@ -227,50 +227,48 @@ export default function Profile() {
             ) : (
               <div className="space-y-4">
                 {profile?.full_name && (
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-gradient-primary/5 border border-primary/10">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
                     <User className="h-5 w-5 text-primary" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Full Name</p>
-                      <p className="font-medium text-lg">{profile.full_name}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Full Name</p>
+                      <p className="font-semibold text-lg tracking-tight">{profile.full_name}</p>
                     </div>
                   </div>
                 )}
 
                 {profile?.username && (
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-border/50">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
                     <User className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Username</p>
-                      <p className="font-medium text-lg">@{profile.username}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Username</p>
+                      <p className="font-semibold text-lg tracking-tight">@{profile.username}</p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
                   <Mail className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Email Address</p>
-                    <p className="font-medium">{user?.email}</p>
+                    <p className="text-sm text-muted-foreground font-medium">Email Address</p>
+                    <p className="font-semibold text-base">{user?.email}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border/60 shadow-sm">
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Member Since</p>
-                    <p className="font-medium">{formatDate(user?.created_at || '')}</p>
+                    <p className="text-sm text-muted-foreground font-medium">Member Since</p>
+                    <p className="font-semibold text-base">{formatDate(user?.created_at || '')}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-success/5 border border-success/10">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-success/10 border border-success/20">
                   <div className="h-5 w-5 flex items-center justify-center">
-                    <div className="h-3 w-3 rounded-full bg-success animate-pulse"></div>
+                    <div className="h-2 w-2 rounded-full bg-success animate-pulse"></div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Account Status</p>
-                    <Badge variant="secondary" className="bg-success/10 text-success border-success/20 font-medium">
-                      ✓ Active & Verified
-                    </Badge>
+                    <p className="text-sm text-muted-foreground font-medium">Account Status</p>
+                    <p className="font-semibold text-success">Active & Verified</p>
                   </div>
                 </div>
               </div>
