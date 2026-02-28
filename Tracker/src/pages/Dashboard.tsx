@@ -743,7 +743,9 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
           </div>
           <p className="text-xs text-muted-foreground mt-1">{new Date(expense.created_at).toLocaleDateString()}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {isPayer ? `You were paid back` : `You paid back ${expense.payer_profile?.full_name || 'someone'}`}
+            {isPayer
+              ? `You were paid by ${expense.expense_splits?.map(s => s.profiles?.full_name).join(', ') || 'someone'}`
+              : `You paid back ${expense.payer_profile?.full_name || 'someone'}`}
           </p>
         </div>
         <div className="flex items-center gap-4 self-end sm:self-auto">

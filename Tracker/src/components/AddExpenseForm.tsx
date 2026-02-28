@@ -252,35 +252,8 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
           {/* SPLIT OPTIONS */}
           {isSplit && (
             <div className="space-y-4 p-4 border rounded-lg bg-card shadow-sm">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Who Paid?</Label>
-                  <Select value={paidBy} onValueChange={(v: string) => setPaidBy(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={user?.id || 'me'}>You</SelectItem>
-                      {friends.filter(f => selectedFriends.includes(f.user_id)).map(f => (
-                        <SelectItem key={f.user_id} value={f.user_id}>{f.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Split Strategy</Label>
-                  <Select value={splitType} onValueChange={(v: any) => setSplitType(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="equal">Equally</SelectItem>
-                      <SelectItem value="exact">Exact Amounts</SelectItem>
-                      <SelectItem value="percentage">By Percentages</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Select Friends to Split With:</Label>
+              <div className="space-y-4 mb-4">
+                <Label className="font-semibold text-base py-2 block">Step 1: Select Friends to Split With</Label>
                 <ScrollArea className="h-40 rounded-md border p-2 bg-background">
                   {friends.length === 0 ? (
                     <div className="text-sm text-center text-muted-foreground pt-4">No accepted friends found.</div>
@@ -335,6 +308,33 @@ export function AddExpenseForm({ onClose, onSuccess }: AddExpenseFormProps) {
                     </div>
                   )}
                 </ScrollArea>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label>Step 2: Who Paid?</Label>
+                  <Select value={paidBy} onValueChange={(v: string) => setPaidBy(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={user?.id || 'me'}>You</SelectItem>
+                      {friends.filter(f => selectedFriends.includes(f.user_id)).map(f => (
+                        <SelectItem key={f.user_id} value={f.user_id}>{f.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Step 3: Split Strategy</Label>
+                  <Select value={splitType} onValueChange={(v: any) => setSplitType(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="equal">Equally</SelectItem>
+                      <SelectItem value="exact">Exact Amounts</SelectItem>
+                      <SelectItem value="percentage">By Percentages</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Display equal split breakdown */}
