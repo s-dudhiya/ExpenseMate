@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Lock, Mail, Send, Settings } from 'lucide-react';
+import { Lock, Mail, Send, Settings, LogOut, Paperclip, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 const ADMIN_PASSWORD = 'exp_admin_2026';
@@ -19,10 +19,12 @@ export default function Admin() {
     const [password, setPassword] = useState('');
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
+    const [attachments, setAttachments] = useState<{ name: string, data: string, size: number }[]>([]);
     const [isSending, setIsSending] = useState(false);
     const [isMaintenance, setIsMaintenance] = useState(false);
     const [fetchingMaintenance, setFetchingMaintenance] = useState(false);
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -108,6 +110,41 @@ export default function Admin() {
         }
     };
 
+    const handleLogout = async () => {
+        setIsAuthenticated(false);
+        setPassword('');
+        // Optional: If you want to also kill the Supabase auth session entirely for the developer
+        // await supabase.auth.signOut();
+        navigate('/auth');
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+
+        // Let's cap total size loosely (e.g. 5MB)
+        const totalSize = attachments.reduce((acc, a) => acc + a.size, 0) + files.reduce((acc, f) => acc + f.size, 0);
+        if (totalSize > 5 * 1024 * 1024) {
+            toast({ title: 'Files too large', description: 'Total attachments must be under 5MB.', variant: 'destructive' });
+            return;
+        }
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setAttachments(prev => [...prev, { name: file.name, data: base64String, size: file.size }]);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // clear input
+        e.target.value = '';
+    };
+
+    const removeAttachment = (indexToRemove: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== indexToRemove));
+    };
+
     const handleSendBroadcast = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -128,7 +165,7 @@ export default function Admin() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${supabaseAnonKey}`,
                 },
-                body: JSON.stringify({ subject, htmlBody: message })
+                body: JSON.stringify({ subject, htmlBody: message, attachments })
             });
 
             if (!res.ok) {
@@ -145,6 +182,7 @@ export default function Admin() {
 
             setSubject('');
             setMessage('');
+            setAttachments([]);
 
         } catch (error: any) {
             console.error("Broadcast Error:", error);
@@ -193,14 +231,19 @@ export default function Admin() {
     return (
         <div className="min-h-screen bg-background p-4 md:p-8">
             <div className="max-w-3xl mx-auto space-y-8">
-                <div className="flex items-center gap-3 mb-8">
-                    <div className="bg-primary/10 p-2 rounded-lg">
-                        <Mail className="h-6 w-6 text-primary" />
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-primary/10 p-2 rounded-lg">
+                            <Mail className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">Developer Portal</h1>
+                            <p className="text-muted-foreground text-sm">Broadcast messages to all registered ExpenseMate users.</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">Developer Portal</h1>
-                        <p className="text-muted-foreground text-sm">Broadcast messages to all registered ExpenseMate users.</p>
-                    </div>
+                    <Button variant="outline" size="sm" onClick={handleLogout} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <LogOut className="h-4 w-4 mr-2" /> Log Out
+                    </Button>
                 </div>
 
                 <div className="grid gap-8 md:grid-cols-2">
@@ -258,6 +301,48 @@ export default function Admin() {
                                         className="min-h-[250px] font-mono text-sm"
                                     />
                                     <p className="text-xs text-muted-foreground">You can use standard HTML tags like &lt;strong&gt;, &lt;br/&gt;, &lt;p&gt;, &lt;h1&gt;.</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <Label>Attachments (Max 5MB)</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="file"
+                                            id="file-upload"
+                                            multiple
+                                            className="hidden"
+                                            onChange={handleFileChange}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => document.getElementById('file-upload')?.click()}
+                                        >
+                                            <Paperclip className="h-4 w-4 mr-2" /> Select Files
+                                        </Button>
+                                    </div>
+
+                                    {attachments.length > 0 && (
+                                        <div className="space-y-2 mt-2">
+                                            {attachments.map((file, idx) => (
+                                                <div key={idx} className="flex items-center justify-between bg-muted/30 p-2 rounded-md border text-sm">
+                                                    <span className="truncate max-w-[200px]">{file.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-muted-foreground text-xs">{(file.size / 1024).toFixed(1)} KB</span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                                            onClick={() => removeAttachment(idx)}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Button type="submit" disabled={isSending} className="w-full bg-primary hover:bg-primary/90">

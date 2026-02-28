@@ -16,9 +16,8 @@ serve(async (req) => {
 
     try {
 
-
-        // 2. Parse Subject and HTML Body from the request
-        const { subject, htmlBody } = await req.json()
+        // 2. Parse Subject, HTML Body, and Attachments from the request
+        const { subject, htmlBody, attachments } = await req.json()
 
         if (!subject || !htmlBody) {
             return new Response(JSON.stringify({ error: 'Subject and htmlBody are required' }), {
@@ -69,16 +68,25 @@ serve(async (req) => {
         });
 
         console.log(`Sending email to ${emails.length} users (BCC)...`);
-
         // Send using BCC to prevent exposing all emails
-        const info = await transporter.sendMail({
+        const mailOptions: any = {
             from: SMTP_USER,
             to: SMTP_USER, // Need at least one "to" address, use own email
             bcc: emails,
             subject: subject,
             text: htmlBody, // Provide text fallback (optional, but good)
             html: htmlBody,
-        });
+        };
+
+        if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+            mailOptions.attachments = attachments.map((att: any) => ({
+                filename: att.name,
+                content: att.data.split(',')[1] || att.data, // Remove data URI prefix if it exists
+                encoding: 'base64'
+            }));
+        }
+
+        const info = await transporter.sendMail(mailOptions);
 
         console.log("Transmission info:", info.messageId);
 
