@@ -41,6 +41,7 @@ export function AddTiffinForm({ onClose, onSuccess }: AddTiffinFormProps) {
                 amount: parsedAmount,
                 status: 'pending',
                 split_type: 'none',
+                paid_by: user.id,
                 created_at: new Date(date).toISOString(),
             });
 

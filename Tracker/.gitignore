@@ -45,3 +45,16 @@ logs
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Linters
+.eslintcache
+.stylelintcache
+
+# Supabase
+.supabase/
+supabase/.temp/
+supabase/functions/*/node_modules/
+supabase/functions/*/.env
