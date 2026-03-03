@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2, Users, ArrowDownRight, ArrowUpRight, Sun, Moon } from 'lucide-react';
+import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2, Users, ArrowDownRight, ArrowUpRight, Sun, Moon, ChevronRight, Pencil } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ExpenseFilters, FilterOptions } from '@/components/ExpenseFilters';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { EditExpenseDialog, EditableExpense } from '@/components/EditExpenseDialog';
 
 interface Profile {
   full_name: string;
@@ -46,6 +47,14 @@ interface Expense {
   payer_profile?: Profile;
 }
 
+interface GroupItem {
+  id: string;
+  name: string;
+  emoji: string;
+  created_by: string;
+  group_members: { user_id: string }[];
+}
+
 const categoryConfig = {
   tiffin: { icon: Utensils, amount: 90, label: 'Tiffin' },
   delivery: { icon: Truck, amount: 15, label: 'Delivery' },
@@ -62,8 +71,16 @@ export default function Dashboard() {
   const [showAddTiffinForm, setShowAddTiffinForm] = useState(false);
   const [mainTab, setMainTab] = useState('overview');
   const [tiffinTab, setTiffinTab] = useState('tiffin');
+  const [splitwiseSubTab, setSplitwiseSubTab] = useState<'friends' | 'groups'>('friends');
   const [filters, setFilters] = useState<FilterOptions>({ timeRange: 'all', status: 'all' });
   const { toast } = useToast();
+
+  // Groups state (for Splitwise > Groups sub-tab)
+  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<EditableExpense | null>(null);
+
+  const handleTabChange = (tab: string) => setMainTab(tab);
 
   useEffect(() => {
     if (user) {
@@ -71,6 +88,24 @@ export default function Dashboard() {
       fetchExpenses();
     }
   }, [user]);
+
+  const fetchGroups = async () => {
+    if (!user) return;
+    setGroupsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('id, name, emoji, created_by, group_members(user_id)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setGroups((data || []) as unknown as GroupItem[]);
+    } catch (e) { console.error(e); } finally { setGroupsLoading(false); }
+  };
+
+  // Fetch groups when switching to splitwise tab's groups sub-tab
+  useEffect(() => {
+    if (mainTab === 'splitwise' && splitwiseSubTab === 'groups' && user) fetchGroups();
+  }, [mainTab, splitwiseSubTab, user]);
 
   if (!authLoading && !user) {
     return <Navigate to="/auth" replace />;
@@ -355,7 +390,7 @@ export default function Dashboard() {
         </div>
 
         <div className="pt-4">
-          <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
+          <Tabs value={mainTab} onValueChange={handleTabChange} className="w-full">
             <div className="hidden md:flex overflow-x-auto pb-6 hide-scrollbar -mx-6 px-6">
               <TabsList className="bg-transparent space-x-2 p-0 h-auto">
                 {['overview', 'personal', 'splitwise', 'tiffin'].map(tab => (
@@ -384,6 +419,23 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 </div>
               </div>
+
+              {/* Groups CTA card */}
+              <div
+                onClick={() => navigate('/groups')}
+                className="flex items-center justify-between p-5 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-3xl cursor-pointer hover:from-primary/15 hover:to-primary/10 transition-all group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-2xl">
+                    👥
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-base">Group Expenses</p>
+                    <p className="text-sm text-muted-foreground font-medium">Trips, apartments &amp; more</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+              </div>
             </TabsContent>
 
             <TabsContent value="personal" className="mt-0 space-y-8">
@@ -401,7 +453,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="space-y-1">
                     {expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery').map(expense => (
-                      <PersonalLedgerCard key={expense.id} expense={expense} currentUserId={user.id} onDelete={handleDelete} />
+                      <PersonalLedgerCard key={expense.id} expense={expense} currentUserId={user.id} onDelete={handleDelete} onEdit={setEditingExpense} />
                     ))}
                   </div>
                 )}
@@ -409,10 +461,50 @@ export default function Dashboard() {
             </TabsContent>
 
             <TabsContent value="splitwise" className="mt-0">
-              <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
-              <div className="mt-6">
-                <ExpenseCategoryView expenses={expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery' && (e.split_type !== 'none' || (e.expense_splits && e.expense_splits.length > 0) || e.paid_by !== user.id))} category="splitwise" currentUserId={user.id} onMarkCleared={markAsCleared} onMarkSplitPaid={markSplitAsPaid} onDelete={handleDelete} filters={filters} />
+              {/* Friends | Groups sub-tabs */}
+              <div className="flex mb-6 bg-secondary/40 p-1 rounded-full w-fit mx-auto h-auto">
+                <button
+                  onClick={() => setSplitwiseSubTab('friends')}
+                  className={`rounded-full px-6 py-2 text-sm font-bold transition-all ${splitwiseSubTab === 'friends'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                  Friends
+                </button>
+                <button
+                  onClick={() => setSplitwiseSubTab('groups')}
+                  className={`rounded-full px-6 py-2 text-sm font-bold transition-all ${splitwiseSubTab === 'groups'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                  Groups
+                </button>
               </div>
+
+              {splitwiseSubTab === 'friends' ? (
+                <>
+                  <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
+                  <div className="mt-6">
+                    <ExpenseCategoryView
+                      expenses={expenses.filter(e =>
+                        e.category !== 'tiffin' && e.category !== 'delivery' &&
+                        (e.split_type !== 'none' || (e.expense_splits && e.expense_splits.length > 0) || e.paid_by !== user.id)
+                      )}
+                      category="splitwise"
+                      currentUserId={user.id}
+                      onMarkCleared={markAsCleared}
+                      onMarkSplitPaid={markSplitAsPaid}
+                      onDelete={handleDelete}
+                      onEdit={setEditingExpense}
+                      filters={filters}
+                    />
+                  </div>
+                </>
+              ) : (
+                <GroupsInline groups={groups} loading={groupsLoading} onNavigate={() => navigate('/groups')} />
+              )}
             </TabsContent>
 
             <TabsContent value="tiffin" className="mt-0">
@@ -441,7 +533,7 @@ export default function Dashboard() {
 
                 {['tiffin', 'delivery'].map(category => (
                   <TabsContent key={category} value={category} className="mt-0">
-                    <ExpenseCategoryView expenses={filterExpensesByCategory(category)} category={category} currentUserId={user.id} onMarkCleared={markAsCleared} onMarkSplitPaid={markSplitAsPaid} onDelete={handleDelete} filters={filters} />
+                    <ExpenseCategoryView expenses={filterExpensesByCategory(category)} category={category} currentUserId={user.id} onMarkCleared={markAsCleared} onMarkSplitPaid={markSplitAsPaid} onDelete={handleDelete} onEdit={setEditingExpense} filters={filters} />
                   </TabsContent>
                 ))}
               </Tabs>
@@ -452,13 +544,25 @@ export default function Dashboard() {
 
       {showAddForm && <AddExpenseForm onClose={() => setShowAddForm(false)} onSuccess={() => { setShowAddForm(false); fetchExpenses(); }} />}
       {showAddTiffinForm && <AddTiffinForm onClose={() => setShowAddTiffinForm(false)} onSuccess={() => { setShowAddTiffinForm(false); fetchExpenses(); }} />}
+      {editingExpense && (
+        <EditExpenseDialog
+          expense={editingExpense}
+          currentUserId={user.id}
+          onClose={() => setEditingExpense(null)}
+          onSuccess={() => { setEditingExpense(null); fetchExpenses(); }}
+        />
+      )}
 
       <BottomNav currentTab={mainTab} onTabChange={setMainTab} />
     </div>
   );
 }
 
-function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Expense; currentUserId: string; onDelete?: (id: string) => void }) {
+function PersonalLedgerCard({ expense, currentUserId, onDelete, onEdit }: {
+  expense: Expense; currentUserId: string;
+  onDelete?: (id: string) => void;
+  onEdit?: (e: EditableExpense) => void;
+}) {
   const isPayer = expense.paid_by === currentUserId;
   let myShare = 0;
   if (isPayer) {
@@ -473,15 +577,11 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
     if (mySplit) myShare = mySplit.amount_owed;
   }
 
-  // Hide 0 value shares or negative errors
   if (myShare <= 0) return null;
 
-  // Personal cards can be deleted by the creator (the actual logger)
-  const isCreator = expense.user_id === currentUserId;
-
   return (
-    <div className="flex items-center justify-between p-4 group hover:bg-muted/30 transition-colors rounded-2xl cursor-pointer">
-      <div className="flex items-center gap-4 min-w-0">
+    <div className="flex items-center justify-between p-4 group hover:bg-muted/30 transition-colors rounded-2xl">
+      <div className="flex items-center gap-4 min-w-0" onClick={() => onEdit?.(expense as unknown as EditableExpense)} style={{ cursor: onEdit ? 'pointer' : 'default' }}>
         <div className="h-12 w-12 rounded-[1rem] bg-secondary flex items-center justify-center shrink-0">
           <Receipt className="h-5 w-5 text-muted-foreground" />
         </div>
@@ -493,9 +593,14 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <span className="text-xl font-bold tracking-tighter text-foreground">₹{myShare.toFixed(2)}</span>
-        {isCreator && onDelete && (
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-xl font-bold tracking-tighter text-foreground mr-2">₹{myShare.toFixed(2)}</span>
+        {onEdit && (
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8 transition-colors md:opacity-0 group-hover:opacity-100" onClick={() => onEdit(expense as unknown as EditableExpense)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {onDelete && (
           <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors md:opacity-0 group-hover:opacity-100" onClick={() => onDelete(expense.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -506,10 +611,14 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete }: { expense: Exp
 }
 
 function ExpenseCategoryView({
-  expenses, category, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete, filters
+  expenses, category, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete, onEdit, filters
 }: {
   expenses: Expense[]; category: string; currentUserId: string;
-  onMarkCleared: (id: string) => void; onMarkSplitPaid: (splitId: string, expenseId: string) => void; onDelete: (id: string) => void; filters: FilterOptions;
+  onMarkCleared: (id: string) => void;
+  onMarkSplitPaid: (splitId: string, expenseId: string) => void;
+  onDelete: (id: string) => void;
+  onEdit?: (e: EditableExpense) => void;
+  filters: FilterOptions;
 }) {
   const pendingExpenses = expenses.filter(e => {
     // If you didn't pay for it (you are a debtor or just the logger who owes)
@@ -545,7 +654,7 @@ function ExpenseCategoryView({
         ) : (
           <div className="space-y-1">
             {pendingExpenses.map(expense => (
-              <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkCleared={onMarkCleared} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} />
+              <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkCleared={onMarkCleared} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </div>
         )}
@@ -562,8 +671,8 @@ function ExpenseCategoryView({
           <div className="space-y-1">
             {clearedExpenses.map(expense => (
               category === 'splitwise'
-                ? <SplitHistoryCard key={expense.id} expense={expense} currentUserId={currentUserId} onDelete={onDelete} />
-                : <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} />
+                ? <SplitHistoryCard key={expense.id} expense={expense} currentUserId={currentUserId} onDelete={onDelete} onEdit={onEdit} />
+                : <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </div>
         )}
@@ -573,10 +682,13 @@ function ExpenseCategoryView({
 }
 
 function ExpenseCard({
-  expense, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete
+  expense, currentUserId, onMarkCleared, onMarkSplitPaid, onDelete, onEdit
 }: {
   expense: Expense; currentUserId: string;
-  onMarkCleared?: (id: string) => void; onMarkSplitPaid?: (splitId: string, expenseId: string) => void; onDelete?: (id: string) => void;
+  onMarkCleared?: (id: string) => void;
+  onMarkSplitPaid?: (splitId: string, expenseId: string) => void;
+  onDelete?: (id: string) => void;
+  onEdit?: (e: EditableExpense) => void;
 }) {
   const config = categoryConfig[expense.category as keyof typeof categoryConfig];
   const Icon = config?.icon || Receipt;
@@ -622,7 +734,12 @@ function ExpenseCard({
             <div className="text-xl sm:text-2xl font-black tracking-tighter text-foreground">₹{displayAmount}</div>
             <span className={`text-[10px] font-bold uppercase tracking-widest ${isPending ? 'text-warning' : 'text-success'}`}>{isPending ? 'Pending' : 'Cleared'}</span>
           </div>
-          {isCreator && onDelete && (
+          {onEdit && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => onEdit(expense as unknown as EditableExpense)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {onDelete && (
             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => onDelete(expense.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -688,28 +805,28 @@ function ExpenseCard({
   );
 }
 
-function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expense; currentUserId: string; onDelete?: (id: string) => void }) {
+function SplitHistoryCard({ expense, currentUserId, onDelete, onEdit }: {
+  expense: Expense; currentUserId: string;
+  onDelete?: (id: string) => void;
+  onEdit?: (e: EditableExpense) => void;
+}) {
   const isPayer = expense.paid_by === currentUserId;
   let myShare = 0;
 
   if (isPayer) {
     if (expense.expense_splits && expense.expense_splits.length > 0) {
-      // You lent this money out, so your "share" is the total others owed YOU
       myShare = expense.expense_splits.reduce((acc, s) => acc + s.amount_owed, 0);
     } else {
       myShare = expense.amount;
     }
   } else {
-    // You owed this money, so your "share" was whatever you owed the payer
     const mySplit = expense.expense_splits?.find(s => s.user_id === currentUserId);
     if (mySplit) myShare = mySplit.amount_owed;
   }
 
   if (myShare <= 0) return null;
 
-  // For cleared history, anyone involved can potentially delete the log, but let's stick to the creator avoiding accidental wipes
   const isCreator = expense.user_id === currentUserId;
-
   const Icon = categoryConfig[expense.category as keyof typeof categoryConfig]?.icon || Receipt;
 
   return (
@@ -730,14 +847,108 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <span className={`text-lg font-bold tracking-tighter ${isPayer ? 'text-success' : 'text-muted-foreground'}`}>{isPayer ? '+' : '-'}₹{myShare.toFixed(2)}</span>
-        {isCreator && onDelete && (
+        {onEdit && (
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8 transition-colors" onClick={() => onEdit(expense as unknown as EditableExpense)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        {onDelete && (
           <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 transition-colors" onClick={() => onDelete(expense.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Groups Inline (inside Splitwise tab) ─────────────────────
+const GRADIENT_COLORS_DASH = [
+  'from-violet-500 to-purple-600',
+  'from-blue-500 to-cyan-600',
+  'from-emerald-500 to-teal-600',
+  'from-rose-500 to-pink-600',
+  'from-amber-500 to-orange-600',
+  'from-indigo-500 to-blue-600',
+];
+function getGroupGradient(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  return GRADIENT_COLORS_DASH[Math.abs(hash) % GRADIENT_COLORS_DASH.length];
+}
+
+function GroupsInline({ groups, loading, onNavigate }: { groups: GroupItem[]; loading: boolean; onNavigate: () => void }) {
+  return (
+    <div className="space-y-3 mt-2">
+      {/* Header with CTA */}
+      <div className="flex items-center justify-between px-1">
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Your Groups</p>
+        <button
+          onClick={onNavigate}
+          className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+        >
+          <Plus className="h-3.5 w-3.5" /> New Group
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2].map(i => <div key={i} className="h-20 rounded-3xl bg-secondary/40 animate-pulse" />)}
+        </div>
+      ) : groups.length === 0 ? (
+        <div
+          onClick={onNavigate}
+          className="flex flex-col items-center justify-center py-14 px-6 bg-secondary/20 rounded-3xl border border-dashed border-border/50 cursor-pointer hover:bg-secondary/30 transition-colors group"
+        >
+          <div className="relative mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-3xl shadow-lg">
+              👥
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow">
+              <Plus className="h-3.5 w-3.5 text-primary-foreground" />
+            </div>
+          </div>
+          <p className="font-bold text-base text-foreground mb-1">No groups yet</p>
+          <p className="text-sm text-muted-foreground font-medium text-center">
+            Create a group for trips, apartments, or any shared costs
+          </p>
+        </div>
+      ) : (
+        <>
+          {groups.map(group => {
+            const gradient = getGroupGradient(group.id);
+            const memberCount = group.group_members?.length || 0;
+            return (
+              <div
+                key={group.id}
+                onClick={onNavigate}
+                className="flex items-center gap-4 p-4 bg-secondary/20 hover:bg-secondary/40 transition-all rounded-2xl border border-border/40 cursor-pointer group active:scale-[0.98]"
+              >
+                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-xl shrink-0 shadow-md`}>
+                  {group.emoji || '🏠'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-extrabold text-sm truncate">{group.name}</p>
+                  <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                    {memberCount} member{memberCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+              </div>
+            );
+          })}
+
+          {/* View all link */}
+          <button
+            onClick={onNavigate}
+            className="w-full py-3 text-sm font-bold text-primary hover:text-primary/80 transition-colors text-center rounded-2xl hover:bg-primary/5"
+          >
+            Manage All Groups →
+          </button>
+        </>
+      )}
     </div>
   );
 }
