@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2, Users, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { LogOut, Plus, Check, Utensils, Truck, Receipt, Wallet, User, Trash2, Users, ArrowDownRight, ArrowUpRight, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +55,7 @@ const categoryConfig = {
 export default function Dashboard() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -290,7 +292,7 @@ export default function Dashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* App Header */}
-      <header className="px-6 pt-6 pb-4 flex justify-between items-center fixed top-0 left-0 right-0 bg-background/90 md:bg-background/80 backdrop-blur-xl z-50 border-b md:border-none border-border/40 max-w-lg md:max-w-none mx-auto">
+      <header className="px-6 pt-6 pb-4 flex justify-between items-center fixed top-0 left-0 right-0 bg-secondary/90 md:bg-secondary/80 backdrop-blur-xl z-50 border-b border-border/40 max-w-lg md:max-w-none mx-auto">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/20">
             {getDisplayName().charAt(0).toUpperCase()}
@@ -301,6 +303,17 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full hover:bg-muted w-10 h-10 transition-transform active:scale-90"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark'
+              ? <Sun className="h-5 w-5 text-warning transition-all duration-300 rotate-0 scale-100" />
+              : <Moon className="h-5 w-5 transition-all duration-300 rotate-0 scale-100" />}
+          </Button>
           <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted w-10 h-10" onClick={() => navigate('/friends')} title="Friends">
             <Users className="h-5 w-5" />
           </Button>
@@ -398,7 +411,7 @@ export default function Dashboard() {
             <TabsContent value="splitwise" className="mt-0">
               <ExpenseFilters filters={filters} onFiltersChange={setFilters} />
               <div className="mt-6">
-                <ExpenseCategoryView expenses={expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery')} category="splitwise" currentUserId={user.id} onMarkCleared={markAsCleared} onMarkSplitPaid={markSplitAsPaid} onDelete={handleDelete} filters={filters} />
+                <ExpenseCategoryView expenses={expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery' && (e.split_type !== 'none' || (e.expense_splits && e.expense_splits.length > 0) || e.paid_by !== user.id))} category="splitwise" currentUserId={user.id} onMarkCleared={markAsCleared} onMarkSplitPaid={markSplitAsPaid} onDelete={handleDelete} filters={filters} />
               </div>
             </TabsContent>
 
@@ -589,7 +602,7 @@ function ExpenseCard({
   }
 
   return (
-    <div className="p-4 sm:p-5 hover:bg-muted/30 transition-colors rounded-3xl border border-border/40 bg-card/40 relative overflow-hidden group mb-3 shadow-sm">
+    <div className="p-4 sm:p-5 bg-secondary/20 hover:bg-secondary/40 transition-colors rounded-3xl border border-border/40 relative overflow-hidden group mb-3">
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors ${isPayer && isSplitExpense ? 'bg-primary' : !isPayer ? 'bg-warning' : 'bg-transparent'}`}></div>
 
       <div className="flex items-start justify-between mb-2">
@@ -700,7 +713,7 @@ function SplitHistoryCard({ expense, currentUserId, onDelete }: { expense: Expen
   const Icon = categoryConfig[expense.category as keyof typeof categoryConfig]?.icon || Receipt;
 
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-2xl cursor-pointer opacity-75 hover:opacity-100">
+    <div className="flex items-center justify-between p-4 bg-secondary/20 hover:bg-secondary/40 transition-colors rounded-2xl cursor-pointer opacity-75 hover:opacity-100 mb-2">
       <div className="flex items-center gap-4 min-w-0">
         <div className="h-10 w-10 rounded-[1rem] bg-secondary flex items-center justify-center shrink-0">
           <Icon className="h-4 w-4 text-muted-foreground" />

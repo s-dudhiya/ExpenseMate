@@ -159,7 +159,7 @@ export default function Auth() {
 
         <div className="relative z-10">
           <h1 className="text-3xl font-bold text-primary-foreground tracking-tight flex items-center gap-2">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-secondary rounded-lg flex items-center justify-center">
               <div className="w-4 h-4 bg-primary rounded-sm" />
             </div>
             ExpenseMate
@@ -182,7 +182,7 @@ export default function Auth() {
           {/* Mobile Header (Hidden on desktop) */}
           <div className="md:hidden mb-12 flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-              <div className="w-4 h-4 bg-white rounded-sm" />
+              <div className="w-4 h-4 bg-secondary rounded-sm" />
             </div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">
               ExpenseMate
@@ -292,7 +292,7 @@ export default function Auth() {
                           required
                           placeholder="Choose a unique username"
                           className={`h-12 bg-muted/50 border-border hover:bg-muted/80 focus-visible:bg-background transition-all pr-10 ${usernameStatus === 'taken' ? 'border-destructive focus-visible:ring-destructive' :
-                              usernameStatus === 'available' ? 'border-success focus-visible:ring-success' : ''
+                            usernameStatus === 'available' ? 'border-success focus-visible:ring-success' : ''
                             }`}
                         />
                         <div className="absolute right-3 top-3.5 flex items-center">

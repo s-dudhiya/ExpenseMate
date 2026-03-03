@@ -230,7 +230,7 @@ export default function Friends() {
             <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
             {/* App Header */}
-            <header className="px-6 pt-8 pb-6 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-xl z-50">
+            <header className="px-6 pt-8 pb-6 flex items-center justify-between sticky top-0 bg-secondary/90 backdrop-blur-xl z-50">
                 <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 hover:bg-muted -ml-2 shrink-0" onClick={() => navigate('/dashboard')}>
                         <ArrowLeft className="h-5 w-5" />

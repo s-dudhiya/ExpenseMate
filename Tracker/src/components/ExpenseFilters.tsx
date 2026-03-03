@@ -18,12 +18,12 @@ export function ExpenseFilters({ filters, onFiltersChange }: ExpenseFiltersProps
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 p-4 bg-card rounded-lg border">
+    <div className="flex flex-col sm:flex-row gap-4 p-4 bg-secondary rounded-lg border">
       <div className="flex items-center gap-2">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-medium">Filters:</span>
       </div>
-      
+
       <div className="flex flex-col sm:flex-row gap-3 flex-1">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />

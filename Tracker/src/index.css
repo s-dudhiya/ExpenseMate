@@ -2,106 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/*
+  ExpenseMate Design System — Premium Indigo Finance
+  Inspired by: Groww, Jupiter, Fi Money (top Indian fintech apps)
+  Light:  Rich lavender-indigo canvas. Clearly purple, warm, premium.
+  Dark:   Deep indigo-black. Moody, high contrast, zero glare.
+  Primary: Violet-purple — wealth, trust, modernity.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 4%;
+    /* ══ LIGHT: Rich Lavender-Indigo ══
+       Background at 80% lightness + 28% saturation = clearly purple/indigo
+       Cards at 87% — still visibly tinted lavender, not white
+    */
+    --background: 250 28% 80%;
+    /* Clearly lavender-indigo         */
+    --foreground: 250 45% 12%;
+    /* Deep indigo-ink text             */
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
+    --card: 250 20% 85%;
+    /* Indigo tinted card, clearly darker than white */
+    --card-foreground: 250 45% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 4%;
+    --popover: 250 20% 85%;
+    --popover-foreground: 250 45% 12%;
 
-    --primary: 221.2 83.2% 53.3%;
-    /* Vibrant Electric Blue */
-    --primary-foreground: 210 40% 98%;
+    /* Vivid violet primary — eye-catching, finance-coded */
+    --primary: 262 72% 54%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 250 26% 73%;
+    /* Deeper indigo for panels         */
+    --secondary-foreground: 250 40% 16%;
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 250 26% 73%;
+    --muted-foreground: 250 18% 46%;
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --accent: 250 26% 73%;
+    --accent-foreground: 250 40% 16%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 68% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: 250 22% 66%;
+    /* Indigo-tinted border             */
+    --input: 250 22% 66%;
+    --ring: 262 72% 54%;
 
-    --success: 142 76% 36%;
-    /* Solid Emerald */
-    --warning: 45 93% 47%;
+    --success: 152 58% 30%;
+    --warning: 38 82% 42%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(221.2 83.2% 53.3%), hsl(221.2 83.2% 43.3%));
-    --shadow-elegant: 0 4px 20px -2px hsl(221.2 83.2% 53.3% / 0.15);
+    --gradient-primary: linear-gradient(135deg, hsl(262 72% 54%), hsl(280 65% 48%));
+    --shadow-elegant: 0 4px 28px -4px hsl(250 50% 20% / 0.22);
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 10% 4%;
-    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-background: 250 28% 76%;
+    --sidebar-foreground: 250 45% 12%;
+    --sidebar-primary: 262 72% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 240 5.9% 90%;
-    --sidebar-ring: 221.2 83.2% 53.3%;
+    --sidebar-accent: 250 26% 73%;
+    --sidebar-accent-foreground: 250 40% 16%;
+    --sidebar-border: 250 22% 66%;
+    --sidebar-ring: 262 72% 54%;
   }
 
   .dark {
-    --background: 240 10% 4%;
-    /* Pitch deep OLED-like background */
-    --foreground: 0 0% 98%;
+    /* ══ DARK: Deep Indigo-Black ══
+       Not plain black — has rich indigo personality.
+       Text at 82% — comfortable, not blazing white.
+    */
+    --background: 248 40% 7%;
+    /* Deep indigo near-black           */
+    --foreground: 250 20% 82%;
+    /* Dimmed indigo-white — no glare   */
 
-    --card: 240 5% 8%;
-    /* Extremely dark grey for cards */
-    --card-foreground: 0 0% 98%;
+    --card: 248 34% 15%;
+    /* Clearly lifted above 7% background */
+    --card-foreground: 250 20% 82%;
 
-    --popover: 240 5% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 248 34% 15%;
+    --popover-foreground: 250 20% 82%;
 
-    --primary: 217.2 91.2% 59.8%;
-    /* Brighter Electric Blue for contrast */
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Brighter violet for dark — pops against the deep background */
+    --primary: 262 80% 65%;
+    --primary-foreground: 248 50% 8%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 248 32% 17%;
+    --secondary-foreground: 250 18% 78%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 248 32% 17%;
+    --muted-foreground: 250 16% 54%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 248 32% 17%;
+    --accent-foreground: 250 18% 78%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62% 38%;
+    --destructive-foreground: 0 0% 92%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217.2 91.2% 59.8%;
+    --border: 248 28% 19%;
+    --input: 248 28% 19%;
+    --ring: 262 80% 65%;
 
-    --success: 142 71% 45%;
-    --warning: 45 93% 47%;
+    --success: 152 60% 40%;
+    --warning: 38 84% 48%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(221.2 83.2% 53.3%));
-    --shadow-elegant: 0 10px 30px -10px hsl(0 0% 0% / 0.8);
+    --gradient-primary: linear-gradient(135deg, hsl(262 80% 65%), hsl(280 72% 56%));
+    --shadow-elegant: 0 14px 44px -10px hsl(248 60% 4% / 0.92);
 
-    --sidebar-background: 240 5% 8%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-background: 248 40% 9%;
+    --sidebar-foreground: 250 20% 80%;
+    --sidebar-primary: 262 80% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 248 32% 17%;
+    --sidebar-accent-foreground: 250 18% 78%;
+    --sidebar-border: 248 28% 19%;
+    --sidebar-ring: 262 80% 65%;
   }
 }
 
@@ -112,5 +129,6 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-weight: 400;
   }
 }

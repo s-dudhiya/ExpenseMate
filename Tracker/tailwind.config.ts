@@ -12,6 +12,18 @@ export default {
         "2xl": "1400px",
       },
     },
+    /* Global font-weight remapping — scales down aggressive weights site-wide */
+    fontWeight: {
+      thin: '100',
+      extralight: '200',
+      light: '300',
+      normal: '400',
+      medium: '450',
+      semibold: '500',
+      bold: '550',
+      extrabold: '600',
+      black: '650',
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",

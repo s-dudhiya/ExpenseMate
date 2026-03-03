@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, User, Mail, Calendar, ArrowLeft, Edit2, Loader2, Check, X, Save, XCircle } from 'lucide-react';
+import { LogOut, User, Mail, Calendar, ArrowLeft, Edit2, Loader2, Check, X, Save, XCircle, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +18,7 @@ export default function Profile() {
   const { user, profile, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editFullName, setEditFullName] = useState('');
@@ -134,7 +136,7 @@ export default function Profile() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* App Header */}
-      <header className="px-6 pt-8 pb-4 flex justify-between items-center sticky top-0 bg-background/80 backdrop-blur-xl z-50">
+      <header className="px-6 pt-8 pb-4 flex justify-between items-center sticky top-0 bg-secondary/90 backdrop-blur-xl z-50">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 hover:bg-muted -ml-2 shrink-0" onClick={() => navigate('/dashboard')}>
             <ArrowLeft className="h-5 w-5" />
@@ -184,7 +186,7 @@ export default function Profile() {
                     onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                     placeholder="Enter unique username"
                     className={`h-12 bg-background border-0 rounded-2xl font-bold shadow-inner px-4 text-base ${usernameStatus === 'taken' ? 'ring-2 ring-destructive/50' :
-                        usernameStatus === 'available' ? 'ring-2 ring-success/50' : ''
+                      usernameStatus === 'available' ? 'ring-2 ring-success/50' : ''
                       }`}
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
@@ -241,6 +243,37 @@ export default function Profile() {
                     <p className="font-bold text-success text-sm">Active & Verified</p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Appearance Group */}
+            <div>
+              <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2">Appearance</h3>
+              <div className="bg-secondary/30 rounded-3xl border border-border/40 overflow-hidden">
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center gap-4 p-4 w-full hover:bg-muted/30 active:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    {theme === 'dark'
+                      ? <Sun className="h-5 w-5 text-warning" />
+                      : <Moon className="h-5 w-5 text-primary" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Theme</p>
+                    <p className="font-bold text-foreground text-sm">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</p>
+                  </div>
+                  {/* Toggle pill */}
+                  <div
+                    className={`relative w-12 h-6 rounded-full transition-colors duration-300 shrink-0 ${theme === 'dark' ? 'bg-primary' : 'bg-muted-foreground/30'
+                      }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0.5'
+                        }`}
+                    />
+                  </div>
+                </button>
               </div>
             </div>
 
