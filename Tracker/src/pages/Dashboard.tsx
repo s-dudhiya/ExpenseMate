@@ -453,7 +453,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="space-y-1">
                     {expenses.filter(e => e.category !== 'tiffin' && e.category !== 'delivery').map(expense => (
-                      <PersonalLedgerCard key={expense.id} expense={expense} currentUserId={user.id} onDelete={handleDelete} onEdit={setEditingExpense} />
+                      <PersonalLedgerCard key={expense.id} expense={expense} currentUserId={user.id} onDelete={handleDelete} onEdit={setEditingExpense} onMarkCleared={markAsCleared} />
                     ))}
                   </div>
                 )}
@@ -558,10 +558,11 @@ export default function Dashboard() {
   );
 }
 
-function PersonalLedgerCard({ expense, currentUserId, onDelete, onEdit }: {
+function PersonalLedgerCard({ expense, currentUserId, onDelete, onEdit, onMarkCleared }: {
   expense: Expense; currentUserId: string;
   onDelete?: (id: string) => void;
   onEdit?: (e: EditableExpense) => void;
+  onMarkCleared?: (id: string) => void;
 }) {
   const isPayer = expense.paid_by === currentUserId;
   let myShare = 0;
@@ -579,13 +580,15 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete, onEdit }: {
 
   if (myShare <= 0) return null;
 
+  const isPending = expense.status !== 'cleared';
+
   return (
     <div className="flex items-center justify-between p-4 group hover:bg-muted/30 transition-colors rounded-2xl">
-      <div className="flex items-center gap-4 min-w-0" onClick={() => onEdit?.(expense as unknown as EditableExpense)} style={{ cursor: onEdit ? 'pointer' : 'default' }}>
+      <div className="flex items-center gap-4 min-w-0" onClick={() => isPending && onEdit?.(expense as unknown as EditableExpense)} style={{ cursor: isPending && onEdit ? 'pointer' : 'default' }}>
         <div className="h-12 w-12 rounded-[1rem] bg-secondary flex items-center justify-center shrink-0">
           <Receipt className="h-5 w-5 text-muted-foreground" />
         </div>
-        <div className="min-w-0 pr-4">
+        <div className="min-w-0 pr-2">
           <h4 className="font-bold text-base text-foreground capitalize truncate">{expense.category}</h4>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{new Date(expense.created_at).toLocaleDateString()}</span>
@@ -594,8 +597,20 @@ function PersonalLedgerCard({ expense, currentUserId, onDelete, onEdit }: {
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <span className="text-xl font-bold tracking-tighter text-foreground mr-2">₹{myShare.toFixed(2)}</span>
-        {onEdit && (
+        <span className={`text-lg font-bold tracking-tighter mr-1 ${isPending ? 'text-foreground' : 'text-success/70'}`}>₹{myShare.toFixed(2)}</span>
+        {/* Mark Cleared — always visible when pending */}
+        {isPending && onMarkCleared && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Mark as Cleared"
+            className="text-success hover:bg-success/10 h-8 w-8 transition-colors"
+            onClick={() => onMarkCleared(expense.id)}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        )}
+        {isPending && onEdit && (
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8 transition-colors md:opacity-0 group-hover:opacity-100" onClick={() => onEdit(expense as unknown as EditableExpense)}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
@@ -671,7 +686,7 @@ function ExpenseCategoryView({
           <div className="space-y-1">
             {clearedExpenses.map(expense => (
               category === 'splitwise'
-                ? <SplitHistoryCard key={expense.id} expense={expense} currentUserId={currentUserId} onDelete={onDelete} onEdit={onEdit} />
+                ? <SplitHistoryCard key={expense.id} expense={expense} currentUserId={currentUserId} onDelete={onDelete} />
                 : <ExpenseCard key={expense.id} expense={expense} currentUserId={currentUserId} onMarkSplitPaid={onMarkSplitPaid} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </div>
@@ -734,7 +749,7 @@ function ExpenseCard({
             <div className="text-xl sm:text-2xl font-black tracking-tighter text-foreground">₹{displayAmount}</div>
             <span className={`text-[10px] font-bold uppercase tracking-widest ${isPending ? 'text-warning' : 'text-success'}`}>{isPending ? 'Pending' : 'Cleared'}</span>
           </div>
-          {onEdit && (
+          {onEdit && isPending && (
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => onEdit(expense as unknown as EditableExpense)}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>

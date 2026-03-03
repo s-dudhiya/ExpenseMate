@@ -972,7 +972,7 @@ function GroupExpenseCard({ expense, currentUserId, onRefresh, onEdit, onDelete 
                             {isPending ? 'Pending' : 'Settled'}
                         </span>
                     </div>
-                    {onEdit && (
+                    {onEdit && isPending && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0" onClick={() => onEdit(expense as unknown as EditableExpense)}>
                             <Pencil className="h-3.5 w-3.5" />
                         </Button>
