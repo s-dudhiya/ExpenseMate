@@ -16,6 +16,7 @@ import Groups from "./pages/Groups";
 import NotFound from "./pages/NotFound";
 import Maintenance from "./pages/Maintenance";
 import InviteAccept from "./pages/InviteAccept";
+import CoffeeWidget from "@/components/SupportScreen";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,7 @@ const AppRoutes = () => {
 
   return (
     <BrowserRouter>
+      <CoffeeWidget />
       <Routes>
         <Route path="/admin" element={<Admin />} />
         {isMaintenanceMode ? (
