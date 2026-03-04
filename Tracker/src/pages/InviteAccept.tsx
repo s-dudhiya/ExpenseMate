@@ -8,7 +8,7 @@ import { Users, Check, Loader2 } from 'lucide-react';
 
 export default function InviteAccept() {
     const [searchParams] = useSearchParams();
-    const token = searchParams.get('token');
+    const token = searchParams.get('token') || localStorage.getItem('pending_invite_token');
     const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -67,6 +67,9 @@ export default function InviteAccept() {
                 .from('group_invites')
                 .update({ status: 'accepted' })
                 .eq('token', token);
+
+            // 4. Clear the pending invite from localStorage
+            localStorage.removeItem('pending_invite_token');
 
             setStatus('done');
             toast({ title: `Welcome to ${group?.name || 'the group'}! 🎉`, description: "You've been added successfully." });
@@ -128,10 +131,18 @@ export default function InviteAccept() {
                             You've been invited to this group on ExpenseMate. Sign in to accept.
                         </p>
                         <div className="space-y-3">
-                            <Button className="w-full rounded-full h-12 font-bold" onClick={() => navigate(`/auth?redirect=/invite?token=${token}`)}>
+                            <Button className="w-full rounded-full h-12 font-bold" onClick={() => {
+                                // Save token to localStorage so it survives the auth redirect flow
+                                if (token) localStorage.setItem('pending_invite_token', token);
+                                navigate(`/auth?redirect=/invite?token=${token}`);
+                            }}>
                                 Sign in to Accept
                             </Button>
-                            <Button variant="outline" className="w-full rounded-full h-12 font-bold" onClick={() => navigate(`/auth?mode=signup&redirect=/invite?token=${token}`)}>
+                            <Button variant="outline" className="w-full rounded-full h-12 font-bold" onClick={() => {
+                                // Save token to localStorage so it survives the email confirmation flow
+                                if (token) localStorage.setItem('pending_invite_token', token);
+                                navigate(`/auth?mode=signup&redirect=/invite?token=${token}`);
+                            }}>
                                 Create Account & Join
                             </Button>
                         </div>

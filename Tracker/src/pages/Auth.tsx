@@ -96,7 +96,20 @@ export default function Auth() {
   }
 
   if (user && !isRecoveryMode) {
-    return <Navigate to="/dashboard" replace />;
+    const params = new URLSearchParams(location.search);
+    let redirectUrl = params.get('redirect');
+
+    if (!redirectUrl || redirectUrl === '/dashboard') {
+      const pendingToken = localStorage.getItem('pending_invite_token');
+      if (pendingToken) {
+        redirectUrl = `/invite?token=${pendingToken}`;
+        // Note: We don't clear it here yet to ensure it's used by InviteAccept
+      } else {
+        redirectUrl = '/dashboard';
+      }
+    }
+
+    return <Navigate to={redirectUrl} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,7 +154,9 @@ export default function Auth() {
     setLoadingForm(true);
 
     if (isSignUp) {
-      await signUp(email, password, fullName, username);
+      const params = new URLSearchParams(location.search);
+      const redirectUrl = params.get('redirect') || undefined;
+      await signUp(email, password, fullName, username, redirectUrl);
     } else {
       await signIn(email, password);
     }

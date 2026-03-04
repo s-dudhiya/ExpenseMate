@@ -17,7 +17,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, username: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, username: string, redirectTo?: string) => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   updatePassword: (password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -114,12 +114,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, username: string) => {
-    const redirectUrl = `https://the-expensemate.vercel.app/`;
+  const signUp = async (email: string, password: string, fullName: string, username: string, redirectTo?: string) => {
+    // If no explicit redirect is provided, fallback to the site's origin (works for both local and prod)
+    const baseRedirect = redirectTo
+      ? `${window.location.origin}${redirectTo}`
+      : `${window.location.origin}/dashboard`;
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirectUrl, data: { full_name: fullName, username: username } }
+      options: { emailRedirectTo: baseRedirect, data: { full_name: fullName, username: username } }
     });
 
     if (error) toast({ title: "Sign Up Failed", description: error.message, variant: "destructive" });

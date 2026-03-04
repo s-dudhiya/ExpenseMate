@@ -114,16 +114,17 @@ serve(async (req) => {
       invite = data;
     }
 
+    const inviteUrl = `${APP_URL}/invite?token=${invite.token}`
+
     let subject: string
     let html: string
 
     if (existingUser) {
       // Existing user — send notification
       subject = `${inviter_name} added you to "${group_name}" on ExpenseMate`
-      html = notificationEmailHtml(inviter_name, group_name, APP_URL)
+      html = notificationEmailHtml(inviter_name, group_name, inviteUrl)
     } else {
       // New user — send invite with magic link
-      const inviteUrl = `${APP_URL}/invite?token=${invite.token}`
       subject = `${inviter_name} invited you to split expenses on ExpenseMate 💸`
       html = inviteEmailHtml(inviter_name, group_name, inviteUrl)
     }

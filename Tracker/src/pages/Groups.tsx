@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     ArrowLeft, Plus, Users, Trash2, ArrowUpRight, ArrowDownRight,
-    Receipt, ChevronRight, Crown, Check, Share2, Wallet, Pencil, Settings2, UserPlus
+    Receipt, ChevronRight, Crown, Check, Share2, Wallet, Pencil, Settings2, UserPlus, X
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -277,6 +277,38 @@ export default function Groups() {
         }
     };
 
+    const handleRemoveMember = async (groupId: string, userId: string) => {
+        if (!confirm('Are you sure you want to remove this member?')) return;
+        try {
+            const { error } = await supabase
+                .from('group_members')
+                .delete()
+                .eq('group_id', groupId)
+                .eq('user_id', userId);
+            if (error) throw error;
+            toast({ title: 'Member removed!' });
+
+            if (userId === user?.id) {
+                setSelectedGroup(null);
+                fetchGroups();
+            } else {
+                // Re-fetch the specific group to update the members list UI
+                const { data } = await supabase
+                    .from('groups')
+                    .select(`
+                        id, name, emoji, description, created_by, created_at,
+                        group_members(user_id, joined_at, profiles!group_members_user_id_fkey(user_id, full_name, username))
+                    `)
+                    .eq('id', groupId)
+                    .single();
+                if (data) setSelectedGroup(data as unknown as Group);
+                fetchGroups(); // Also update the main list
+            }
+        } catch (e: any) {
+            toast({ title: 'Error', description: e.message, variant: 'destructive' });
+        }
+    };
+
     const handleResendInvite = async (email: string) => {
         if (!selectedGroup || !user) return;
         try {
@@ -449,6 +481,7 @@ export default function Groups() {
                 inviteEmail={inviteEmail} setInviteEmail={setInviteEmail}
                 inviting={inviting} onSendEmailInvite={handleSendEmailInvite}
                 onResendInvite={handleResendInvite}
+                onRemoveMember={handleRemoveMember}
             />
         );
     }
@@ -685,7 +718,7 @@ function GroupDetailView({
     editGroupDesc, setEditGroupDesc, savingGroup, onSaveGroup,
     showAddMember, onOpenAddMember, onCloseAddMember,
     addMemberIds, setAddMemberIds, addingMember, onAddMembers,
-    inviteEmail, setInviteEmail, inviting, onSendEmailInvite, onResendInvite,
+    inviteEmail, setInviteEmail, inviting, onSendEmailInvite, onResendInvite, onRemoveMember,
 }: {
     group: Group;
     expenses: GroupExpense[];
@@ -716,6 +749,7 @@ function GroupDetailView({
     inviteEmail: string; setInviteEmail: (v: string) => void;
     inviting: boolean; onSendEmailInvite: () => void;
     onResendInvite: (email: string) => void;
+    onRemoveMember: (groupId: string, userId: string) => void;
 }) {
     const gradient = getGroupGradient(group.id);
     const [editingExpense, setEditingExpense] = useState<EditableExpense | null>(null);
@@ -790,14 +824,25 @@ function GroupDetailView({
                     <div className="flex flex-wrap gap-3">
                         {/* Real members */}
                         {group.group_members?.map(m => (
-                            <div key={m.user_id} className="flex flex-col items-center gap-1.5">
+                            <div key={m.user_id} className="flex flex-col items-center gap-1.5 group/avatar">
                                 <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${getGroupGradient(m.user_id)} flex items-center justify-center text-white font-bold text-base shadow-md relative`}>
                                     {m.profiles?.full_name?.charAt(0)?.toUpperCase() || '?'}
                                     {m.user_id === group.created_by && (
-                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center border-2 border-background">
                                             <Crown className="h-2.5 w-2.5 text-white" />
                                         </div>
                                     )}
+
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRemoveMember(group.id, m.user_id);
+                                        }}
+                                        className="absolute -top-1 -left-1 w-5 h-5 bg-background shadow-lg rounded-full flex items-center justify-center text-destructive border border-border/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
+                                        title={`Remove ${m.profiles?.full_name || 'member'}`}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
                                 </div>
                                 <span className="text-[10px] font-bold text-muted-foreground max-w-[56px] truncate text-center">
                                     {m.user_id === currentUserId ? 'You' : m.profiles?.full_name?.split(' ')[0] || '?'}
