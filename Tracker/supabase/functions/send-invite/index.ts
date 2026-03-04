@@ -4,14 +4,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import nodemailer from 'npm:nodemailer'
 
 const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 const APP_URL = Deno.env.get('APP_URL') || 'https://expensemate.app'
 
 function inviteEmailHtml(inviterName: string, groupName: string, inviteUrl: string) {
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#0f0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -44,7 +44,7 @@ function inviteEmailHtml(inviterName: string, groupName: string, inviteUrl: stri
 }
 
 function notificationEmailHtml(inviterName: string, groupName: string, appUrl: string) {
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <body style="margin:0;padding:0;background:#0f0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:520px;margin:40px auto;background:#1a1a24;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
@@ -69,71 +69,90 @@ function notificationEmailHtml(inviterName: string, groupName: string, appUrl: s
 }
 
 serve(async (req) => {
-    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-    try {
-        const { email, group_id, group_name, inviter_name } = await req.json()
-        if (!email || !group_id || !group_name || !inviter_name) {
-            return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-                status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            })
-        }
-
-        const supabaseAdmin = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        )
-
-        // Check if email already exists in the app
-        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers()
-        const existingUser = usersData?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
-
-        // Upsert group_invite record
-        const { data: invite, error: inviteErr } = await supabaseAdmin
-            .from('group_invites')
-            .upsert({ group_id, invited_by: null, email, status: 'pending' },
-                { onConflict: 'email,group_id', ignoreDuplicates: false })
-            .select('token').single()
-
-        if (inviteErr) throw inviteErr
-
-        // Setup SMTP
-        const SMTP_HOST = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com'
-        const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '465')
-        const SMTP_USER = Deno.env.get('SMTP_USER')
-        const SMTP_PASS = Deno.env.get('SMTP_PASS')
-        if (!SMTP_USER || !SMTP_PASS) throw new Error('Missing SMTP credentials')
-
-        const transporter = nodemailer.createTransport({
-            host: SMTP_HOST, port: SMTP_PORT,
-            secure: SMTP_PORT === 465,
-            auth: { user: SMTP_USER, pass: SMTP_PASS },
-            maxMessageSize: 100 * 1024 * 1024,
-        })
-
-        let subject: string
-        let html: string
-
-        if (existingUser) {
-            // Existing user — send notification
-            subject = `${inviterName} added you to "${group_name}" on ExpenseMate`
-            html = notificationEmailHtml(inviter_name, group_name, APP_URL)
-        } else {
-            // New user — send invite with magic link
-            const inviteUrl = `${APP_URL}/invite?token=${invite.token}`
-            subject = `${inviter_name} invited you to split expenses on ExpenseMate 💸`
-            html = inviteEmailHtml(inviter_name, group_name, inviteUrl)
-        }
-
-        await transporter.sendMail({ from: `ExpenseMate <${SMTP_USER}>`, to: email, subject, html })
-
-        return new Response(JSON.stringify({ success: true, isExistingUser: !!existingUser }), {
-            status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-    } catch (error: any) {
-        console.error('send-invite error:', error.message)
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+  try {
+    const { email, group_id, group_name, inviter_name } = await req.json()
+    if (!email || !group_id || !group_name || !inviter_name) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Check if email already exists in the app
+    const { data: usersData } = await supabaseAdmin.auth.admin.listUsers()
+    const existingUser = usersData?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+
+    // Check if invite exists manually to avoid upsert UNIQUE constraint error
+    const { data: existingInvite } = await supabaseAdmin
+      .from('group_invites')
+      .select('*')
+      .eq('email', email)
+      .eq('group_id', group_id)
+      .maybeSingle()
+
+    let invite;
+    if (existingInvite) {
+      const { data, error: updateErr } = await supabaseAdmin
+        .from('group_invites')
+        .update({ status: 'pending' })
+        .eq('id', existingInvite.id)
+        .select('token').single()
+      if (updateErr) throw updateErr
+      invite = data;
+    } else {
+      const { data, error: insertErr } = await supabaseAdmin
+        .from('group_invites')
+        .insert({ group_id, invited_by: null, email, status: 'pending' })
+        .select('token').single()
+      if (insertErr) throw insertErr
+      invite = data;
+    }
+
+    let subject: string
+    let html: string
+
+    if (existingUser) {
+      // Existing user — send notification
+      subject = `${inviter_name} added you to "${group_name}" on ExpenseMate`
+      html = notificationEmailHtml(inviter_name, group_name, APP_URL)
+    } else {
+      // New user — send invite with magic link
+      const inviteUrl = `${APP_URL}/invite?token=${invite.token}`
+      subject = `${inviter_name} invited you to split expenses on ExpenseMate 💸`
+      html = inviteEmailHtml(inviter_name, group_name, inviteUrl)
+    }
+
+    // Setup SMTP (if credentials exist)
+    const SMTP_HOST = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com'
+    const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '465')
+    const SMTP_USER = Deno.env.get('SMTP_USER')
+    const SMTP_PASS = Deno.env.get('SMTP_PASS')
+
+    if (SMTP_USER && SMTP_PASS) {
+      const transporter = nodemailer.createTransport({
+        host: SMTP_HOST, port: SMTP_PORT,
+        secure: SMTP_PORT === 465,
+        auth: { user: SMTP_USER, pass: SMTP_PASS },
+        maxMessageSize: 100 * 1024 * 1024,
+      })
+      await transporter.sendMail({ from: `ExpenseMate <${SMTP_USER}>`, to: email, subject, html })
+    } else {
+      console.warn("SMTP credentials missing. Invite generated in DB but email not sent.");
+    }
+
+    return new Response(JSON.stringify({ success: true, isExistingUser: !!existingUser }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  } catch (error: any) {
+    console.error('send-invite error:', error.message)
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
 })
