@@ -60,11 +60,12 @@ serve(async (req) => {
         const transporter = nodemailer.createTransport({
             host: SMTP_HOST,
             port: SMTP_PORT,
-            secure: SMTP_PORT === 465, // true for port 465, false for others
+            secure: SMTP_PORT === 465,
             auth: {
                 user: SMTP_USER,
                 pass: SMTP_PASS,
             },
+            maxMessageSize: 100 * 1024 * 1024, // 100 MB
         });
 
         console.log(`Sending email to ${emails.length} users (BCC)...`);

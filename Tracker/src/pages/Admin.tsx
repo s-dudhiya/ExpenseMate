@@ -23,6 +23,7 @@ export default function Admin() {
     const [isSending, setIsSending] = useState(false);
     const [isMaintenance, setIsMaintenance] = useState(false);
     const [fetchingMaintenance, setFetchingMaintenance] = useState(false);
+    const [readingFiles, setReadingFiles] = useState(0); // how many files are being read
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -121,18 +122,28 @@ export default function Admin() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
 
-        // Let's cap total size loosely (e.g. 5MB)
+        // Cap total size at 100MB
         const totalSize = attachments.reduce((acc, a) => acc + a.size, 0) + files.reduce((acc, f) => acc + f.size, 0);
-        if (totalSize > 5 * 1024 * 1024) {
-            toast({ title: 'Files too large', description: 'Total attachments must be under 5MB.', variant: 'destructive' });
+        if (totalSize > 100 * 1024 * 1024) {
+            toast({ title: 'Files too large', description: 'Total attachments must be under 100MB.', variant: 'destructive' });
             return;
         }
 
         files.forEach(file => {
+            setReadingFiles(n => n + 1);
             const reader = new FileReader();
             reader.onloadend = () => {
+                setReadingFiles(n => n - 1);
                 const base64String = reader.result as string;
-                setAttachments(prev => [...prev, { name: file.name, data: base64String, size: file.size }]);
+                if (base64String) {
+                    setAttachments(prev => [...prev, { name: file.name, data: base64String, size: file.size }]);
+                } else {
+                    toast({ title: 'Read Error', description: `Could not read ${file.name}.`, variant: 'destructive' });
+                }
+            };
+            reader.onerror = () => {
+                setReadingFiles(n => n - 1);
+                toast({ title: 'File Error', description: `Failed to read "${file.name}". The file may be corrupt.`, variant: 'destructive' });
             };
             reader.readAsDataURL(file);
         });
@@ -305,7 +316,7 @@ export default function Admin() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <Label>Attachments (Max 5MB)</Label>
+                                    <Label>Attachments (Max 100MB)</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
                                             type="file"
@@ -323,13 +334,21 @@ export default function Admin() {
                                         </Button>
                                     </div>
 
+                                    {/* Reading indicator */}
+                                    {readingFiles > 0 && (
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg border border-border/50 animate-pulse">
+                                            <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                                            Reading {readingFiles} file{readingFiles > 1 ? 's' : ''}…
+                                        </div>
+                                    )}
+
                                     {attachments.length > 0 && (
                                         <div className="space-y-2 mt-2">
                                             {attachments.map((file, idx) => (
                                                 <div key={idx} className="flex items-center justify-between bg-muted/30 p-2 rounded-md border text-sm">
                                                     <span className="truncate max-w-[200px]">{file.name}</span>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-muted-foreground text-xs">{(file.size / 1024).toFixed(1)} KB</span>
+                                                        <span className="text-muted-foreground text-xs">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
                                                         <Button
                                                             type="button"
                                                             variant="ghost"

@@ -15,6 +15,7 @@ import Friends from "./pages/Friends";
 import Groups from "./pages/Groups";
 import NotFound from "./pages/NotFound";
 import Maintenance from "./pages/Maintenance";
+import InviteAccept from "./pages/InviteAccept";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,7 @@ const AppRoutes = () => {
             <Route path="/friends" element={<Friends />} />
             <Route path="/groups" element={<Groups />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/invite" element={<InviteAccept />} />
             <Route path="*" element={<NotFound />} />
           </>
         )}

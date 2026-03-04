@@ -175,6 +175,11 @@ export default function Groups() {
     const [addMemberIds, setAddMemberIds] = useState<string[]>([]);
     const [addingMember, setAddingMember] = useState(false);
 
+    // Email invite state
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviting, setInviting] = useState(false);
+    const [groupInvites, setGroupInvites] = useState<{ id: string; email: string; status: string; created_at: string }[]>([]);
+
     const fetchGroups = useCallback(async () => {
         if (!user) return;
         setLoading(true);
@@ -233,7 +238,62 @@ export default function Groups() {
     }, [user]);
 
     useEffect(() => { if (user) { fetchGroups(); fetchFriends(); } }, [user, fetchGroups, fetchFriends]);
-    useEffect(() => { if (selectedGroup) fetchGroupExpenses(selectedGroup.id); }, [selectedGroup, fetchGroupExpenses]);
+    useEffect(() => { if (selectedGroup) { fetchGroupExpenses(selectedGroup.id); fetchGroupInvites(selectedGroup.id); } }, [selectedGroup, fetchGroupExpenses]);
+
+    const fetchGroupInvites = async (groupId: string) => {
+        const { data } = await (supabase as any)
+            .from('group_invites')
+            .select('id, email, status, created_at')
+            .eq('group_id', groupId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+        setGroupInvites((data || []) as { id: string; email: string; status: string; created_at: string }[]);
+    };
+
+    const handleSendEmailInvite = async () => {
+        if (!selectedGroup || !inviteEmail.trim() || !user) return;
+        setInviting(true);
+        try {
+            // Get inviter's profile name
+            const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).single();
+            const inviterName = profile?.full_name || 'A friend';
+
+            const { error } = await supabase.functions.invoke('send-invite', {
+                body: {
+                    email: inviteEmail.trim().toLowerCase(),
+                    group_id: selectedGroup.id,
+                    group_name: selectedGroup.name,
+                    inviter_name: inviterName,
+                }
+            });
+            if (error) throw error;
+            toast({ title: 'Invite sent! 📬', description: `${inviteEmail} will receive an email.` });
+            setInviteEmail('');
+            fetchGroupInvites(selectedGroup.id);
+        } catch (e: any) {
+            toast({ title: 'Failed to send', description: e.message, variant: 'destructive' });
+        } finally {
+            setInviting(false);
+        }
+    };
+
+    const handleResendInvite = async (email: string) => {
+        if (!selectedGroup || !user) return;
+        try {
+            const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).single();
+            await supabase.functions.invoke('send-invite', {
+                body: {
+                    email,
+                    group_id: selectedGroup.id,
+                    group_name: selectedGroup.name,
+                    inviter_name: profile?.full_name || 'A friend',
+                }
+            });
+            toast({ title: 'Reminder sent! 🔔', description: `${email} was reminded.` });
+        } catch (e: any) {
+            toast({ title: 'Error', description: e.message, variant: 'destructive' });
+        }
+    };
 
     if (!authLoading && !user) return <Navigate to="/auth" replace />;
 
@@ -362,11 +422,12 @@ export default function Groups() {
                 expensesLoading={expensesLoading}
                 currentUserId={user!.id}
                 nonMemberFriends={nonMembers}
+                pendingInvites={groupInvites}
                 onBack={() => setSelectedGroup(null)}
                 onDelete={() => handleDeleteGroup(selectedGroup.id)}
                 onSettleUp={handleSettleUp}
                 onAddExpense={() => setShowAddExpense(true)}
-                onRefresh={() => fetchGroupExpenses(selectedGroup.id)}
+                onRefresh={() => { fetchGroupExpenses(selectedGroup.id); fetchGroupInvites(selectedGroup.id); }}
                 onDeleteExpense={handleDeleteGroupExpense}
                 showAddExpense={showAddExpense}
                 onCloseAddExpense={() => setShowAddExpense(false)}
@@ -380,10 +441,14 @@ export default function Groups() {
                 savingGroup={savingGroup} onSaveGroup={handleEditGroup}
                 // Add members
                 showAddMember={showAddMember}
-                onOpenAddMember={() => { setAddMemberIds([]); setShowAddMember(true); }}
+                onOpenAddMember={() => { setAddMemberIds([]); setInviteEmail(''); setShowAddMember(true); }}
                 onCloseAddMember={() => setShowAddMember(false)}
                 addMemberIds={addMemberIds} setAddMemberIds={setAddMemberIds}
                 addingMember={addingMember} onAddMembers={handleAddMembers}
+                // Email invite
+                inviteEmail={inviteEmail} setInviteEmail={setInviteEmail}
+                inviting={inviting} onSendEmailInvite={handleSendEmailInvite}
+                onResendInvite={handleResendInvite}
             />
         );
     }
@@ -612,6 +677,7 @@ function GroupEmptyState({ onCreate }: { onCreate: () => void }) {
 function GroupDetailView({
     group, expenses, expensesLoading, currentUserId,
     nonMemberFriends,
+    pendingInvites,
     onBack, onDelete, onSettleUp, onAddExpense, onRefresh, onDeleteExpense,
     showAddExpense, onCloseAddExpense,
     showEditGroup, onOpenEditGroup, onCloseEditGroup,
@@ -619,6 +685,7 @@ function GroupDetailView({
     editGroupDesc, setEditGroupDesc, savingGroup, onSaveGroup,
     showAddMember, onOpenAddMember, onCloseAddMember,
     addMemberIds, setAddMemberIds, addingMember, onAddMembers,
+    inviteEmail, setInviteEmail, inviting, onSendEmailInvite, onResendInvite,
 }: {
     group: Group;
     expenses: GroupExpense[];
@@ -645,6 +712,10 @@ function GroupDetailView({
     onCloseAddMember: () => void;
     addMemberIds: string[]; setAddMemberIds: (ids: string[]) => void;
     addingMember: boolean; onAddMembers: () => void;
+    pendingInvites: { id: string; email: string; status: string; created_at: string }[];
+    inviteEmail: string; setInviteEmail: (v: string) => void;
+    inviting: boolean; onSendEmailInvite: () => void;
+    onResendInvite: (email: string) => void;
 }) {
     const gradient = getGroupGradient(group.id);
     const [editingExpense, setEditingExpense] = useState<EditableExpense | null>(null);
@@ -713,10 +784,11 @@ function GroupDetailView({
                     </div>
                 </div>
 
-                {/* Member Avatars */}
+                {/* Member Avatars + Pending Ghost Avatars */}
                 <div className="bg-secondary/20 rounded-3xl p-5 border border-border/40">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Members</p>
                     <div className="flex flex-wrap gap-3">
+                        {/* Real members */}
                         {group.group_members?.map(m => (
                             <div key={m.user_id} className="flex flex-col items-center gap-1.5">
                                 <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${getGroupGradient(m.user_id)} flex items-center justify-center text-white font-bold text-base shadow-md relative`}>
@@ -730,6 +802,18 @@ function GroupDetailView({
                                 <span className="text-[10px] font-bold text-muted-foreground max-w-[56px] truncate text-center">
                                     {m.user_id === currentUserId ? 'You' : m.profiles?.full_name?.split(' ')[0] || '?'}
                                 </span>
+                            </div>
+                        ))}
+                        {/* Ghost avatars for pending email invites */}
+                        {pendingInvites.map(inv => (
+                            <div key={inv.id} className="flex flex-col items-center gap-1.5">
+                                <div className="w-12 h-12 rounded-2xl border-2 border-dashed border-border/60 bg-secondary/40 flex items-center justify-center text-muted-foreground/60 font-bold text-base relative">
+                                    {inv.email.charAt(0).toUpperCase()}
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-warning/80 rounded-full flex items-center justify-center">
+                                        <span className="text-[8px] text-white font-bold">?</span>
+                                    </div>
+                                </div>
+                                <span className="text-[9px] font-bold text-muted-foreground/60 max-w-[56px] truncate text-center">Pending</span>
                             </div>
                         ))}
                     </div>
@@ -886,9 +970,9 @@ function GroupDetailView({
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
                         {nonMemberFriends.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">All your friends are already in this group.</p>
+                            <p className="text-sm text-muted-foreground text-center py-2">All your friends are already in this group.</p>
                         ) : (
-                            <ScrollArea className="h-48 rounded-xl border border-border/50 bg-secondary/30 p-2">
+                            <ScrollArea className="h-40 rounded-xl border border-border/50 bg-secondary/30 p-2">
                                 <div className="space-y-1.5">
                                     {nonMemberFriends.map(f => {
                                         const sel = addMemberIds.includes(f.user_id);
@@ -909,6 +993,54 @@ function GroupDetailView({
                                 </div>
                             </ScrollArea>
                         )}
+
+                        {/* Invite by Email section */}
+                        <div className="border-t border-border/40 pt-3 space-y-2">
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Invite by Email</p>
+                            <div className="flex gap-2">
+                                <Input
+                                    type="email"
+                                    value={inviteEmail}
+                                    onChange={e => setInviteEmail(e.target.value)}
+                                    placeholder="friend@email.com"
+                                    className="rounded-xl flex-1"
+                                    onKeyDown={e => e.key === 'Enter' && onSendEmailInvite()}
+                                />
+                                <Button
+                                    onClick={onSendEmailInvite}
+                                    disabled={!inviteEmail.trim() || inviting}
+                                    className="rounded-xl shrink-0 font-bold"
+                                    size="sm"
+                                >
+                                    {inviting ? '...' : 'Send 📬'}
+                                </Button>
+                            </div>
+                            {/* Pending invites with Remind button */}
+                            {pendingInvites.length > 0 && (
+                                <div className="space-y-1.5 mt-2">
+                                    <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Pending ({pendingInvites.length})</p>
+                                    {pendingInvites.map(inv => (
+                                        <div key={inv.id} className="flex items-center justify-between p-2 rounded-xl bg-secondary/30">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 rounded-full border-2 border-dashed border-border/60 bg-secondary/40 flex items-center justify-center text-[11px] font-bold text-muted-foreground">
+                                                    {inv.email.charAt(0).toUpperCase()}
+                                                </div>
+                                                <span className="text-xs font-medium text-muted-foreground truncate max-w-[140px]">{inv.email}</span>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 px-2 text-[10px] font-bold text-primary hover:bg-primary/10 rounded-lg"
+                                                onClick={() => onResendInvite(inv.email)}
+                                            >
+                                                🔔 Remind
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="flex gap-2">
                             <Button variant="outline" className="flex-1 rounded-xl" onClick={onCloseAddMember}>Cancel</Button>
                             <Button className="flex-1 rounded-xl font-bold" disabled={addMemberIds.length === 0 || addingMember} onClick={onAddMembers}>
@@ -1119,6 +1251,8 @@ function GroupExpenseForm({ group, currentUserId, onClose, onSuccess }: {
             }
 
             toast({ title: '✓ Expense Added', description: `₹${parsedAmount.toFixed(2)} split across ${selectedParticipants.length} people` });
+            // Notify all split participants via email
+            supabase.functions.invoke('send-expense-notification', { body: { expense_id: expData.id } }).catch(() => { });
             onSuccess();
         } catch (e: any) {
             toast({ title: 'Error', description: e.message, variant: 'destructive' });
