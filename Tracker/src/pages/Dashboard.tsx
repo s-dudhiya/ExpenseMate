@@ -328,14 +328,11 @@ export default function Dashboard() {
 
       {/* App Header */}
       <header className="px-6 pt-6 pb-4 flex justify-between items-center fixed top-0 left-0 right-0 bg-secondary/90 md:bg-secondary/80 backdrop-blur-xl z-50 border-b border-border/40 max-w-lg md:max-w-none mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/20">
-            {getDisplayName().charAt(0).toUpperCase()}
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20 text-lg">
+            💰
           </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-0.5">Welcome back</p>
-            <h2 className="text-base font-extrabold tracking-tight leading-none">{getDisplayName()}</h2>
-          </div>
+          <h1 className="text-lg font-extrabold tracking-tight text-foreground">ExpenseMate</h1>
         </div>
         <div className="flex gap-2">
           <Button

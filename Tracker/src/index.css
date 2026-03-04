@@ -132,3 +132,32 @@
     font-weight: 400;
   }
 }
+
+/* ── Capacitor Android: Safe Area Insets ── */
+@layer utilities {
+  /* Apply on any sticky header to clear the system status bar */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* All sticky headers get extra top padding for Android status bar */
+  header.sticky {
+    padding-top: calc(env(safe-area-inset-top) + 1.5rem);
+  }
+
+  /* Bottom nav clears Android nav bar */
+  .bottom-nav-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

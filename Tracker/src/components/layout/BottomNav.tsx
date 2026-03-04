@@ -15,7 +15,10 @@ export function BottomNav({ currentTab, onTabChange }: BottomNavProps) {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-secondary/95 backdrop-blur-xl border-t border-border/60 shadow-[0_-6px_30px_rgba(0,0,0,0.18)] pb-6 pt-3 px-2 sm:px-4 transition-all w-full">
+        <div
+            className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-secondary/95 backdrop-blur-xl border-t border-border/60 shadow-[0_-6px_30px_rgba(0,0,0,0.18)] pt-3 px-2 sm:px-4 transition-all w-full"
+            style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+        >
             <div className="flex justify-between items-center max-w-md mx-auto relative px-2">
                 {navItems.map((item) => {
                     const isActive = currentTab === item.id;
