@@ -58,22 +58,11 @@ export default function Admin() {
         try {
             setIsMaintenance(checked); // Optimistic UI update
 
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-            const res = await fetch(`${supabaseUrl}/functions/v1/toggle-maintenance`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseAnonKey}`,
-                },
-                body: JSON.stringify({ isMaintenance: checked, password: ADMIN_PASSWORD })
+            const { data, error } = await supabase.functions.invoke('toggle-maintenance', {
+                body: { isMaintenance: checked, password: ADMIN_PASSWORD }
             });
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.error || 'Failed to toggle maintenance mode');
-            }
+            if (error) throw error;
 
             toast({
                 title: 'Site State Updated',
@@ -167,25 +156,11 @@ export default function Admin() {
         setIsSending(true);
 
         try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-            const res = await fetch(`${supabaseUrl}/functions/v1/send-admin-mail`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseAnonKey}`,
-                    'apikey': supabaseAnonKey,
-                },
-                body: JSON.stringify({ subject, htmlBody: message, attachments })
+            const { data, error } = await supabase.functions.invoke('send-admin-mail', {
+                body: { subject, htmlBody: message, attachments, password: ADMIN_PASSWORD }
             });
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.error || 'Failed to send broadcast');
-            }
-
-            const data = await res.json();
+            if (error) throw error;
 
             toast({
                 title: 'Broadcast Sent!',

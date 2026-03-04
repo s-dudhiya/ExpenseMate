@@ -17,7 +17,15 @@ serve(async (req) => {
     try {
 
         // 2. Parse Subject, HTML Body, and Attachments from the request
-        const { subject, htmlBody, attachments } = await req.json()
+        const { subject, htmlBody, attachments, password } = await req.json()
+
+        // 3. Verify the hardcoded frontend password (same as in Admin.tsx)
+        if (password !== 'exp_admin_2026') {
+            return new Response(JSON.stringify({ error: 'Unauthorized access' }), {
+                status: 401,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+        }
 
         if (!subject || !htmlBody) {
             return new Response(JSON.stringify({ error: 'Subject and htmlBody are required' }), {
